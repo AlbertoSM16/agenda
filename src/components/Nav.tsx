@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/tareas", label: "Tareas", icon: "✅" },
   { href: "/notas", label: "Notas", icon: "📝" },
   { href: "/finanzas", label: "Finanzas", icon: "💶" },
+  { href: "/entrenos", label: "Entrenos", icon: "🏃" },
   { href: "/compras", label: "Compras", icon: "🛒" },
 ];
 

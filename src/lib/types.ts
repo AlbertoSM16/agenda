@@ -94,3 +94,77 @@ export const KINDS = {
   ingreso: { label: "Ingreso", plural: "Ingresos", sign: "+", color: "text-emerald-600" },
   ahorro: { label: "Ahorro", plural: "Ahorro", sign: "→", color: "text-sky-600" },
 } as const;
+
+// ---------- Entrenamientos ----------
+
+export type Sport = "bici" | "carrera" | "gimnasio" | "natacion" | "otro";
+
+export const SPORTS: Record<Sport, { label: string; icon: string; badge: string; bar: string }> = {
+  bici: { label: "Bici", icon: "🚴", badge: "bg-orange-100 text-orange-800", bar: "bg-orange-400" },
+  carrera: { label: "Carrera", icon: "🏃", badge: "bg-emerald-100 text-emerald-800", bar: "bg-emerald-500" },
+  gimnasio: { label: "Gimnasio", icon: "🏋️", badge: "bg-violet-100 text-violet-800", bar: "bg-violet-500" },
+  natacion: { label: "Natación", icon: "🏊", badge: "bg-sky-100 text-sky-800", bar: "bg-sky-500" },
+  otro: { label: "Otro", icon: "⚡", badge: "bg-slate-100 text-slate-700", bar: "bg-slate-400" },
+};
+
+export const isSport = (s: string | undefined | null): s is Sport => !!s && s in SPORTS;
+
+export interface Lap {
+  distance_m: number | null;
+  duration_s: number | null;
+  avg_hr: number | null;
+  avg_speed_mps: number | null;
+  avg_power: number | null;
+  elevation_gain_m: number | null;
+}
+
+export interface Workout {
+  id: string;
+  garmin_activity_id: number | null;
+  source: "garmin" | "manual";
+  sport: Sport;
+  garmin_type: string | null;
+  title: string;
+  started_at: string;
+  duration_s: number | null;
+  moving_s: number | null;
+  distance_m: number | null;
+  elevation_gain_m: number | null;
+  avg_hr: number | null;
+  max_hr: number | null;
+  avg_speed_mps: number | null;
+  max_speed_mps: number | null;
+  calories: number | null;
+  avg_power: number | null;
+  norm_power: number | null;
+  avg_cadence: number | null;
+  pool_length_m: number | null;
+  avg_swolf: number | null;
+  strokes: number | null;
+  aerobic_te: number | null;
+  anaerobic_te: number | null;
+  training_load: number | null;
+  vo2max: number | null;
+  laps: Lap[] | null;
+  rpe: number | null;
+  notes: string | null;
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  muscle_group: string | null;
+  garmin_key: string | null;
+}
+
+export interface WorkoutSet {
+  id: string;
+  workout_id: string;
+  exercise_id: string;
+  set_index: number;
+  reps: number | null;
+  weight_kg: number | null;
+  duration_s: number | null;
+  is_warmup: boolean;
+  source: "garmin" | "manual";
+}

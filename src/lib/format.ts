@@ -56,3 +56,51 @@ export function addMinutesLocal(s: string, minutes: number) {
   d.setUTCMinutes(d.getUTCMinutes() + minutes);
   return d.toISOString().slice(0, 19);
 }
+
+// ---------- Entrenamientos ----------
+
+/** Lunes (YYYY-MM-DD) de la semana de una fecha. */
+export function mondayOf(iso: string) {
+  const d = asUTC(iso.slice(0, 10));
+  return addDays(iso.slice(0, 10), -((d.getUTCDay() + 6) % 7));
+}
+
+/** "1 h 05 min" / "45 min". */
+export function fmtDuration(s: number | null | undefined) {
+  if (!s) return "—";
+  const t = Math.round(Number(s));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  return h ? `${h} h ${String(m).padStart(2, "0")} min` : `${m} min`;
+}
+
+/** "1:05:12" / "4:35". */
+export function fmtClock(s: number | null | undefined) {
+  if (s === null || s === undefined || !Number.isFinite(Number(s))) return "—";
+  const t = Math.round(Number(s));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const sec = String(t % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
+
+/** Ritmo a partir de m/s: por km (carrera) o por 100 m (natación). */
+export function fmtPace(mps: number | null | undefined, perMeters = 1000) {
+  if (!mps || Number(mps) <= 0) return "—";
+  return fmtClock(perMeters / Number(mps));
+}
+
+export function fmtKmh(mps: number | null | undefined) {
+  if (!mps) return "—";
+  return `${fmtNum(Number(mps) * 3.6, 1)} km/h`;
+}
+
+export function fmtKm(m: number | null | undefined, digits = 1) {
+  if (!m) return "—";
+  return `${fmtNum(Number(m) / 1000, digits)} km`;
+}
+
+export function fmtNum(n: number | null | undefined, digits = 0) {
+  if (n === null || n === undefined || !Number.isFinite(Number(n))) return "—";
+  return Number(n).toLocaleString("es-ES", { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+}

@@ -6,33 +6,10 @@ import { createClient } from "./supabase/server";
 import { todayISO } from "./format";
 import { deleteGoogleEvent, googleSession, revokeToken, upsertGoogleEvent } from "./google";
 import type { AgendaEvent } from "./types";
+import { back, num, required, str, withParam } from "./form";
 
-const TABLES = ["events", "tasks", "notes", "transactions", "shopping_items"] as const;
+const TABLES = ["events", "tasks", "notes", "transactions", "shopping_items", "workouts", "exercises"] as const;
 type Table = (typeof TABLES)[number];
-
-function str(fd: FormData, key: string): string | null {
-  const v = fd.get(key);
-  const t = typeof v === "string" ? v.trim() : "";
-  return t === "" ? null : t;
-}
-
-function num(fd: FormData, key: string): number | null {
-  const v = str(fd, key);
-  if (v === null) return null;
-  const n = Number(v.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Ruta a la que volver tras la acción: solo rutas internas. */
-function back(fd: FormData, fallback: string) {
-  const b = str(fd, "back");
-  return b && b.startsWith("/") && !b.startsWith("//") ? b : fallback;
-}
-
-function required<T>(value: T | null, name: string): T {
-  if (value === null) throw new Error(`Falta el campo obligatorio: ${name}`);
-  return value;
-}
 
 async function save(table: Table, fd: FormData, data: Record<string, unknown>, fallback: string) {
   const supabase = await createClient();
@@ -113,10 +90,6 @@ async function syncToGoogle(
   }
 }
 
-function withParam(path: string, param: string | null) {
-  if (!param) return path;
-  return `${path}${path.includes("?") ? "&" : "?"}${param}`;
-}
 
 export async function syncAllEvents() {
   const supabase = await createClient();

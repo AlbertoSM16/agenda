@@ -14,7 +14,7 @@ Stack: Next.js 15 (App Router, Server Actions) + Tailwind CSS, con Supabase (Pos
 ## 1. Configurar Supabase
 
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Ve a **SQL Editor** y ejecuta, en orden, cada fichero de `supabase/migrations/` (`0001_init.sql`, `0002_google_calendar.sql`, `0003_ahorro.sql`, `0004_grants.sql`). El `0004` es imprescindible: sin él Supabase responde *permission denied* y la app sale vacía.
+2. Ve a **SQL Editor** y ejecuta, en orden, cada fichero de `supabase/migrations/` (`0001_init.sql` … `0005_entrenos.sql`). El `0004` es imprescindible: sin él Supabase responde *permission denied* y la app sale vacía.
 3. En **Authentication → Sign In / Providers → Email**, desactiva **Allow new users to sign up** para que nadie más pueda registrarse.
 4. En **Authentication → Users → Add user → Create new user**, crea tu usuario con tu email y contraseña (marca *Auto Confirm User*).
 5. En **Project Settings → API** copia la **Project URL** y la clave **anon / publishable**.
@@ -60,6 +60,31 @@ Notas:
 - La sincronización va de la agenda a Google. Los cambios que hagas directamente en Google no vuelven a la agenda. Si borras un evento en Google y luego lo editas en la agenda, se vuelve a crear.
 - El aviso "Predeterminado de Google" usa los avisos por defecto de tu calendario. Puedes elegir "Sin aviso" o desde "a la hora del evento" hasta "1 semana antes".
 
+## 5. Entrenamientos y Garmin
+
+La sección **🏃 Entrenos** guarda tus sesiones de bici, carrera, gimnasio y natación:
+- Resumen de la semana y del mes por deporte, horas por semana (últimas 8 semanas) e historial filtrable.
+- Detalle de cada entreno con las métricas de su deporte: ritmo/km en carrera, km/h y potencia en bici, ritmo/100 m y SWOLF en natación, vueltas, FC, efecto de entrenamiento, VO₂máx…
+- Gimnasio: series con ejercicio, repeticiones y peso, y la página **Ejercicios y progreso** con el 1RM estimado por sesión.
+- RPE y notas en cualquier entreno, y entrenos manuales.
+
+### Conectar Garmin (API no oficial)
+
+> ⚠️ Garmin no ofrece su API a particulares, así que se usa la **API no oficial** de Garmin Connect (la misma que usan proyectos como *garth*). Puede dejar de funcionar si Garmin cambia algo y no está permitida por sus términos de uso. Tu contraseña **no se guarda**: solo se usa una vez para obtener un acceso (token), que se guarda **cifrado** en Supabase.
+
+1. Ejecuta `supabase/migrations/0005_entrenos.sql` en el SQL Editor de Supabase.
+2. Genera una clave de cifrado con `openssl rand -base64 32` y guárdala como `GARMIN_TOKEN_KEY` en Vercel (*Settings → Environment Variables*) y en `.env.local`. Vuelve a desplegar. **No cambies la clave después**: si lo haces, tendrás que volver a conectar Garmin.
+3. En **Entrenos → Conectar con Garmin Connect** introduce tu email y contraseña de Garmin. Si tienes la verificación en dos pasos activada, te pedirá el código.
+4. La primera sincronización importa los últimos 6 meses. Después la agenda sincroniza sola cada vez que abres Entrenos (si ha pasado más de 1 h), y también puedes pulsar **Sincronizar ahora**.
+
+**Plan B: si Garmin bloquea el login desde Vercel** (error 403/429). Garmin a veces rechaza los inicios de sesión que llegan desde servidores. En ese caso, en tu ordenador:
+
+```bash
+npm run garmin:login      # requiere Node 22.18 o superior
+```
+
+Inicia sesión allí (con el código MFA si te lo pide), copia el bloque de texto que aparece y pégalo en **Entrenos → Plan B: pegar tokens**. El acceso dura alrededor de un año.
+
 ## Estructura
 
 ```
@@ -69,6 +94,8 @@ src/lib/actions.ts                  Server Actions (crear, editar, borrar…)
 src/lib/supabase/server.ts          cliente Supabase en el servidor
 src/lib/google.ts                   API de Google Calendar (OAuth, crear/editar/borrar eventos)
 src/app/api/google/…                conexión OAuth con Google
+src/lib/garmin/                     cliente de Garmin (login, cifrado de tokens, sincronización)
+scripts/garmin-login.ts             plan B: login de Garmin desde tu ordenador
 src/app/(app)/…                     páginas: inicio, calendario, tareas, notas, finanzas, compras
 src/components/                     componentes compartidos
 ```

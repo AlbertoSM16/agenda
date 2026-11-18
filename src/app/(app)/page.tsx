@@ -1,8 +1,9 @@
 import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { addDays, addMonths, eur, fmtDate, fmtTime, todayISO } from "@/lib/format";
-import { EVENT_TYPES, PRIORITIES, type AgendaEvent, type ShoppingItem, type Task, type Transaction } from "@/lib/types";
+import { addDays, addMonths, eur, fmtDate, fmtDuration, fmtKm, fmtTime, mondayOf, todayISO } from "@/lib/format";
+import { EVENT_TYPES, PRIORITIES, SPORTS, type AgendaEvent, type ShoppingItem, type Sport, type Task, type Transaction, type Workout } from "@/lib/types";
+import { SPORT_ORDER, addTo, emptyTotals, type Totals } from "@/lib/training";
 import { toggleTask } from "@/lib/actions";
 import { DbError, Empty } from "@/components/ui";
 
@@ -12,11 +13,12 @@ export default async function Dashboard() {
   const ym = today.slice(0, 7);
   const in7 = addDays(today, 8);
 
-  const [events, tasks, txs, shopping] = await Promise.all([
+  const [events, tasks, txs, shopping, trainings] = await Promise.all([
     supabase.from("events").select("*").gte("starts_at", today).lt("starts_at", in7).order("starts_at"),
     supabase.from("tasks").select("*").neq("status", "hecha").not("due_date", "is", null).lte("due_date", addDays(today, 7)).order("due_date"),
     supabase.from("transactions").select("kind,amount").gte("date", `${ym}-01`).lt("date", `${addMonths(ym, 1)}-01`),
     supabase.from("shopping_items").select("estimated_price").eq("status", "pendiente"),
+    supabase.from("workouts").select("sport,duration_s,distance_m,elevation_gain_m").gte("started_at", mondayOf(today)),
   ]);
 
   const ev = (events.data ?? []) as AgendaEvent[];
@@ -29,10 +31,17 @@ export default async function Dashboard() {
   const available = income - expense - savings;
   const shop = (shopping.data ?? []) as Pick<ShoppingItem, "estimated_price">[];
   const shopTotal = shop.reduce((s, i) => s + Number(i.estimated_price ?? 0), 0);
+  const weekTotal = emptyTotals();
+  const weekBySport = new Map<Sport, Totals>();
+  for (const w of (trainings.data ?? []) as Pick<Workout, "sport" | "duration_s" | "distance_m" | "elevation_gain_m">[]) {
+    addTo(weekTotal, w);
+    if (!weekBySport.has(w.sport)) weekBySport.set(w.sport, emptyTotals());
+    addTo(weekBySport.get(w.sport)!, w);
+  }
 
   return (
     <div className="space-y-6">
-      <DbError message={dbError(events, tasks, txs, shopping)} />
+      <DbError message={dbError(events, tasks, txs, shopping, trainings)} />
       <div>
         <h1 className="text-2xl font-bold capitalize">{fmtDate(today, { weekday: "long", day: "numeric", month: "long" })}</h1>
         <p className="text-sm text-slate-500">Resumen de tu día</p>
@@ -45,6 +54,18 @@ export default async function Dashboard() {
         <Stat label="Disponible" value={eur(available)} className={available >= 0 ? "text-emerald-600" : "text-red-600"} href="/finanzas" />
         <Stat label={`Lista de compras (${shop.length})`} value={eur(shopTotal)} href="/compras" />
       </div>
+
+      <Link href="/entrenos" className="card flex flex-wrap items-center gap-x-4 gap-y-2 hover:border-indigo-300">
+        <span className="text-sm font-semibold">🏃 Entrenos esta semana</span>
+        <span className="text-sm text-slate-600">
+          {weekTotal.sessions} sesiones · {fmtDuration(weekTotal.seconds)}{weekTotal.meters > 0 ? ` · ${fmtKm(weekTotal.meters)}` : ""}
+        </span>
+        <span className="flex flex-wrap gap-1">
+          {SPORT_ORDER.filter((s) => weekBySport.has(s)).map((s) => (
+            <span key={s} className={`badge ${SPORTS[s].badge}`}>{SPORTS[s].icon} {weekBySport.get(s)!.sessions}</span>
+          ))}
+        </span>
+      </Link>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card">
