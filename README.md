@@ -14,7 +14,7 @@ Stack: Next.js 15 (App Router, Server Actions) + Tailwind CSS, con Supabase (Pos
 ## 1. Configurar Supabase
 
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Ve a **SQL Editor**, pega el contenido de `supabase/migrations/0001_init.sql` y ejecútalo.
+2. Ve a **SQL Editor** y ejecuta, en orden, cada fichero de `supabase/migrations/` (`0001_init.sql`, `0002_google_calendar.sql`, `0003_ahorro.sql`, `0004_grants.sql`). El `0004` es imprescindible: sin él Supabase responde *permission denied* y la app sale vacía.
 3. En **Authentication → Sign In / Providers → Email**, desactiva **Allow new users to sign up** para que nadie más pueda registrarse.
 4. En **Authentication → Users → Add user → Create new user**, crea tu usuario con tu email y contraseña (marca *Auto Confirm User*).
 5. En **Project Settings → API** copia la **Project URL** y la clave **anon / publishable**.

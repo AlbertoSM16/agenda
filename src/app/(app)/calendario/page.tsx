@@ -1,10 +1,11 @@
+import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { addMonths, fmtDate, fmtTime, isYearMonth, monthLabel, toInputDT, todayISO } from "@/lib/format";
 import { EVENT_TYPES, REMINDER_OPTIONS, type AgendaEvent } from "@/lib/types";
 import { disconnectGoogle, saveEvent, syncAllEvents } from "@/lib/actions";
 import { googleConfigured } from "@/lib/google";
-import { Empty, Field, PageHeader } from "@/components/ui";
+import { DbError, Empty, Field, PageHeader } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -28,14 +29,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
   const ym = isYearMonth(sp.month) ? sp.month : (sp.day ?? today).slice(0, 7);
   const supabase = await createClient();
 
-  const [{ data }, editRes, googleRes] = await Promise.all([
+  const [mainRes, editRes, googleRes] = await Promise.all([
     supabase.from("events").select("*").gte("starts_at", `${ym}-01`).lt("starts_at", `${addMonths(ym, 1)}-01`).order("starts_at"),
     sp.edit ? supabase.from("events").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("google_accounts").select("email").maybeSingle(),
   ]);
   const google = googleRes.data as { email: string | null } | null;
   const gcalMsg = sp.gcal ? GCAL_MESSAGES[sp.gcal] : undefined;
-  const events = (data ?? []) as AgendaEvent[];
+  const events = (mainRes.data ?? []) as AgendaEvent[];
   const editing = editRes.data as AgendaEvent | null;
 
   const byDay = new Map<string, AgendaEvent[]>();
@@ -58,6 +59,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
 
   return (
     <div>
+      <DbError message={dbError(mainRes, editRes)} />
       <PageHeader title="Calendario">
         <Link href={`/calendario?month=${addMonths(ym, -1)}`} className="btn">←</Link>
         <span className="min-w-36 text-center font-medium capitalize">{monthLabel(ym)}</span>

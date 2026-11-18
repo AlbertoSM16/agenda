@@ -1,9 +1,10 @@
+import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, addMonths, eur, fmtDate, fmtTime, todayISO } from "@/lib/format";
 import { EVENT_TYPES, PRIORITIES, type AgendaEvent, type ShoppingItem, type Task, type Transaction } from "@/lib/types";
 import { toggleTask } from "@/lib/actions";
-import { Empty } from "@/components/ui";
+import { DbError, Empty } from "@/components/ui";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -31,6 +32,7 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <DbError message={dbError(events, tasks, txs, shopping)} />
       <div>
         <h1 className="text-2xl font-bold capitalize">{fmtDate(today, { weekday: "long", day: "numeric", month: "long" })}</h1>
         <p className="text-sm text-slate-500">Resumen de tu día</p>

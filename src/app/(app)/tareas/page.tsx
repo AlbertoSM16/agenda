@@ -1,9 +1,10 @@
+import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate, todayISO } from "@/lib/format";
 import { PRIORITIES, type Task } from "@/lib/types";
 import { saveTask, toggleTask } from "@/lib/actions";
-import { Empty, Field, PageHeader, Tabs } from "@/components/ui";
+import { DbError, Empty, Field, PageHeader, Tabs } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -24,11 +25,11 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
     ? query.order("completed_at", { ascending: false }).limit(200)
     : query.order("due_date", { ascending: true, nullsFirst: false });
 
-  const [{ data }, editRes] = await Promise.all([
+  const [mainRes, editRes] = await Promise.all([
     query,
     sp.edit ? supabase.from("tasks").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const tasks = (data ?? []) as Task[];
+  const tasks = (mainRes.data ?? []) as Task[];
   if (ver !== "hechas") {
     tasks.sort((a, b) =>
       (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999") || PRIORITIES[a.priority].order - PRIORITIES[b.priority].order,
@@ -39,6 +40,7 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
 
   return (
     <div>
+      <DbError message={dbError(mainRes, editRes)} />
       <PageHeader title="Tareas">
         <Tabs
           items={[

@@ -1,9 +1,10 @@
+import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate } from "@/lib/format";
 import type { Note } from "@/lib/types";
 import { saveNote } from "@/lib/actions";
-import { Empty, Field, PageHeader } from "@/components/ui";
+import { DbError, Empty, Field, PageHeader } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -19,12 +20,12 @@ export default async function NotesPage({ searchParams }: { searchParams: SP }) 
   if (q) query = query.textSearch("fts", q, { type: "websearch", config: "spanish" });
   if (tag) query = query.contains("tags", [tag]);
 
-  const [{ data }, tagsRes, editRes] = await Promise.all([
+  const [mainRes, tagsRes, editRes] = await Promise.all([
     query,
     supabase.from("notes").select("tags"),
     sp.edit ? supabase.from("notes").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const notes = (data ?? []) as Note[];
+  const notes = (mainRes.data ?? []) as Note[];
   const editing = editRes.data as Note | null;
 
   const tagCount = new Map<string, number>();
@@ -39,6 +40,7 @@ export default async function NotesPage({ searchParams }: { searchParams: SP }) 
 
   return (
     <div>
+      <DbError message={dbError(mainRes, tagsRes, editRes)} />
       <PageHeader title="Notas y conocimiento">
         <Link href={`/notas?nueva=1`} className="btn-primary">+ Nueva nota</Link>
       </PageHeader>

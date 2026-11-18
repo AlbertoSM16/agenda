@@ -37,3 +37,8 @@ export function Tabs({ items }: { items: { href: string; label: string; active: 
     </div>
   );
 }
+
+export function DbError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">⚠️ {message}</p>;
+}

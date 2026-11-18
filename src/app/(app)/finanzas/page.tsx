@@ -1,9 +1,10 @@
+import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { addMonths, eur, fmtDate, isYearMonth, monthLabel, todayISO } from "@/lib/format";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, KINDS, SAVINGS_CATEGORIES, type Transaction } from "@/lib/types";
 import { saveTransaction } from "@/lib/actions";
-import { Empty, Field, PageHeader, Tabs } from "@/components/ui";
+import { DbError, Empty, Field, PageHeader, Tabs } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -15,12 +16,12 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
   const ym = isYearMonth(sp.month) ? sp.month : today.slice(0, 7);
   const supabase = await createClient();
 
-  const [{ data }, editRes] = await Promise.all([
+  const [mainRes, editRes] = await Promise.all([
     supabase.from("transactions").select("*").gte("date", `${ym}-01`).lt("date", `${addMonths(ym, 1)}-01`)
       .order("date", { ascending: false }).order("created_at", { ascending: false }),
     sp.edit ? supabase.from("transactions").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const all = ((data ?? []) as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) }));
+  const all = ((mainRes.data ?? []) as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) }));
   const editing = editRes.data as Transaction | null;
 
   const income = all.filter((t) => t.kind === "ingreso").reduce((s, t) => s + t.amount, 0);
@@ -42,6 +43,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
 
   return (
     <div>
+      <DbError message={dbError(mainRes, editRes)} />
       <PageHeader title="Finanzas">
         <Link href={`/finanzas?month=${addMonths(ym, -1)}`} className="btn">←</Link>
         <span className="min-w-36 text-center font-medium capitalize">{monthLabel(ym)}</span>

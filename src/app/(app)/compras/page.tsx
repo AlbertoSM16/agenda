@@ -1,9 +1,10 @@
+import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { eur, fmtDate } from "@/lib/format";
 import { PRIORITIES, type ShoppingItem } from "@/lib/types";
 import { buyShoppingItem, saveShoppingItem, setShoppingStatus } from "@/lib/actions";
-import { Empty, Field, PageHeader } from "@/components/ui";
+import { DbError, Empty, Field, PageHeader } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -13,8 +14,8 @@ const back = "/compras";
 export default async function ShoppingPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const supabase = await createClient();
-  const { data } = await supabase.from("shopping_items").select("*").order("created_at", { ascending: false });
-  const items = (data ?? []) as ShoppingItem[];
+  const mainRes = await supabase.from("shopping_items").select("*").order("created_at", { ascending: false });
+  const items = (mainRes.data ?? []) as ShoppingItem[];
   const editing = sp.edit ? items.find((i) => i.id === sp.edit) ?? null : null;
 
   const pending = items
@@ -26,6 +27,7 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
 
   return (
     <div>
+      <DbError message={dbError(mainRes)} />
       <PageHeader title="Lista de compras">
         <span className="text-sm text-slate-600">{pending.length} pendientes · <b>{eur(total)}</b> estimado</span>
       </PageHeader>
