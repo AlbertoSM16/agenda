@@ -46,3 +46,8 @@ next-env.d.ts
 .eslintcache
 .turbo
 .swc
+
+# IntelliJ IDEA
+.idea/workspace.xml
+.idea/modules.xml
+*.iml
