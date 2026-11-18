@@ -73,10 +73,10 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
       <div className="flex flex-wrap items-start gap-3">
         <span className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl ${sport.badge}`}>{sport.icon}</span>
         <div className="flex-1">
-          <Link href="/entrenos" className="text-xs text-indigo-600">← Entrenos</Link>
+          <Link href="/entrenos" className="text-xs text-indigo-400">← Entrenos</Link>
           <h1 className="text-2xl font-bold">{w.title}</h1>
-          <p className="text-sm capitalize text-slate-500">
-            {fmtDate(w.started_at, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {fmtTime(w.started_at)} · {sport.label}
+          <p className="text-sm text-slate-400">
+            {(() => { const t = fmtDate(w.started_at, { weekday: "long", day: "numeric", month: "long", year: "numeric" }); return t.charAt(0).toUpperCase() + t.slice(1); })()} · {fmtTime(w.started_at)} · {sport.label}
             {w.source === "garmin" ? " · ⌚ Garmin" : " · manual"}
             {w.rpe ? ` · RPE ${w.rpe}/10` : ""}
           </p>
@@ -87,13 +87,13 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
         </div>
       </div>
 
-      {sp.guardado && <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Series guardadas.</p>}
+      {sp.guardado && <p className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-300">Series guardadas.</p>}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {shown.map(([label, value]) => (
           <div key={label} className="card py-3">
-            <p className="text-xs text-slate-500">{label}</p>
-            <p className="text-lg font-semibold">{value}</p>
+            <p className="text-xs text-slate-400">{label}</p>
+            <p className="font-mono text-lg font-semibold text-white">{value}</p>
           </div>
         ))}
       </div>
@@ -101,7 +101,7 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
       {w.notes && !editing && <p className="card whitespace-pre-wrap text-sm">{w.notes}</p>}
 
       {editing && (
-        <form action={saveWorkout} className="card space-y-3">
+        <form action={saveWorkout} className="card flex flex-col gap-3">
           <h2 className="h2">Editar entreno</h2>
           <input type="hidden" name="id" value={w.id} />
           <input type="hidden" name="source" value={w.source} />
@@ -139,17 +139,17 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
         <section className="card overflow-x-auto">
           <h2 className="h2">Vueltas</h2>
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-slate-500">
+            <thead className="text-left text-xs text-slate-400">
               <tr>
                 <th className="py-1 pr-3">#</th><th className="pr-3">Distancia</th><th className="pr-3">Tiempo</th>
                 <th className="pr-3">{w.sport === "bici" ? "Velocidad" : "Ritmo"}</th><th className="pr-3">FC</th>
                 {w.sport === "bici" && <th className="pr-3">Potencia</th>}<th>Desnivel</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-800/70">
               {w.laps.map((l, i) => (
                 <tr key={i}>
-                  <td className="py-1 pr-3 text-slate-500">{i + 1}</td>
+                  <td className="py-1 pr-3 text-slate-400">{i + 1}</td>
                   <td className="pr-3">{w.sport === "natacion" ? `${fmtNum(l.distance_m)} m` : fmtKm(l.distance_m, 2)}</td>
                   <td className="pr-3">{fmtClock(l.duration_s)}</td>
                   <td className="pr-3">{w.sport === "bici" ? fmtKmh(l.avg_speed_mps) : fmtPace(l.avg_speed_mps, w.sport === "natacion" ? 100 : 1000)}</td>
@@ -164,30 +164,30 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
       )}
 
       {showSets && (
-        <form action={saveWorkoutSets} className="card space-y-3">
+        <form action={saveWorkoutSets} className="card flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="h2 mb-0">Series</h2>
-            {volume > 0 && <span className="text-sm text-slate-600">Volumen total: <b>{fmtNum(volume)} kg</b></span>}
+            {volume > 0 && <span className="text-sm text-slate-300">Volumen total: <b>{fmtNum(volume)} kg</b></span>}
           </div>
           {sets.some((s) => s.source === "garmin") && (
-            <p className="text-xs text-slate-500">⌚ Series detectadas por el reloj: revisa nombres y pesos y guarda.</p>
+            <p className="text-xs text-slate-400">⌚ Series detectadas por el reloj: revisa nombres y pesos y guarda.</p>
           )}
           <input type="hidden" name="workout_id" value={w.id} />
           <input type="hidden" name="rows" value={rows.length} />
           <datalist id="ejercicios">{exercises.map((e) => <option key={e.id} value={e.name} />)}</datalist>
           <div className="space-y-2">
-            <div className="grid grid-cols-[1.5rem_1fr_4.5rem_5rem_2.5rem] gap-2 text-xs text-slate-500 sm:grid-cols-[1.5rem_1fr_6rem_6rem_6rem_3rem]">
+            <div className="grid grid-cols-[1.5rem_1fr_4.5rem_5rem_2.5rem] gap-2 text-xs text-slate-400 sm:grid-cols-[1.5rem_1fr_6rem_6rem_6rem_3rem]">
               <span>#</span><span>Ejercicio</span><span>Reps</span><span>Kg</span><span className="hidden sm:block">1RM est.</span><span title="Calentamiento">Cal.</span>
             </div>
             {rows.map((r, i) => {
               const est = r.warm ? null : e1rm(r.kg, r.reps);
               return (
                 <div key={i} className="grid grid-cols-[1.5rem_1fr_4.5rem_5rem_2.5rem] items-center gap-2 sm:grid-cols-[1.5rem_1fr_6rem_6rem_6rem_3rem]">
-                  <span className="text-xs text-slate-400">{i + 1}</span>
+                  <span className="text-xs text-slate-500">{i + 1}</span>
                   <input className="input py-1" name={`ex_${i}`} list="ejercicios" defaultValue={r.name} placeholder={i === 0 ? "Press banca" : ""} />
                   <input className="input py-1" name={`reps_${i}`} type="number" min="0" step="1" inputMode="numeric" defaultValue={r.reps ?? ""} />
                   <input className="input py-1" name={`kg_${i}`} type="number" min="0" step="0.25" inputMode="decimal" defaultValue={r.kg ?? ""} />
-                  <span className="hidden text-xs text-slate-500 sm:block">{est ? `${fmtNum(est, 1)} kg` : ""}</span>
+                  <span className="hidden text-xs text-slate-400 sm:block">{est ? `${fmtNum(est, 1)} kg` : ""}</span>
                   <input type="checkbox" name={`warm_${i}`} defaultChecked={r.warm} className="h-4 w-4" title="Serie de calentamiento" />
                 </div>
               );
@@ -197,12 +197,12 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
             <SubmitButton>Guardar series</SubmitButton>
             <Link href={`/entrenos/${w.id}?filas=${extraRows + 5}`} className="btn" scroll={false}>+ 5 filas</Link>
           </div>
-          <p className="text-xs text-slate-500">Consejo: escribe el ejercicio en cada fila (se autocompleta). Deja la fila vacía para borrarla.</p>
+          <p className="text-xs text-slate-400">Consejo: escribe el ejercicio en cada fila (se autocompleta). Deja la fila vacía para borrarla.</p>
         </form>
       )}
       {!showSets && (
-        <p className="text-center text-xs text-slate-500">
-          ¿Hiciste también fuerza? <Link href={`/entrenos/${w.id}?filas=6`} className="text-indigo-600 underline">Añadir series</Link>
+        <p className="text-center text-xs text-slate-400">
+          ¿Hiciste también fuerza? <Link href={`/entrenos/${w.id}?filas=6`} className="text-indigo-400 underline">Añadir series</Link>
         </p>
       )}
     </div>

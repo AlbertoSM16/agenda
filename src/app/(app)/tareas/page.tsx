@@ -56,7 +56,7 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
           {tasks.length === 0 ? (
             <Empty>No hay tareas aquí</Empty>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-800/70">
               {tasks.map((t) => {
                 const done = t.status === "hecha";
                 const overdue = !done && t.due_date !== null && t.due_date < today;
@@ -68,7 +68,7 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
                       <input type="hidden" name="back" value={back} />
                       <button
                         className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded border text-xs ${
-                          done ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-400 hover:bg-emerald-100"
+                          done ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-600 hover:bg-emerald-500/20"
                         }`}
                         title={done ? "Marcar como pendiente" : "Marcar como hecha"}
                       >
@@ -76,13 +76,13 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
                       </button>
                     </form>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-medium ${done ? "text-slate-400 line-through" : ""}`}>{t.title}</p>
-                      {t.description && <p className="whitespace-pre-wrap text-xs text-slate-500">{t.description}</p>}
+                      <p className={`text-sm font-medium ${done ? "text-slate-500 line-through" : ""}`}>{t.title}</p>
+                      {t.description && <p className="whitespace-pre-wrap text-xs text-slate-400">{t.description}</p>}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <span className={`badge ${PRIORITIES[t.priority].color}`}>{PRIORITIES[t.priority].label}</span>
-                        {t.status === "en_curso" && <span className="badge bg-sky-100 text-sky-700">En curso</span>}
+                        {t.status === "en_curso" && <span className="badge bg-sky-500/15 text-sky-300">En curso</span>}
                         {t.due_date && (
-                          <span className={`badge ${overdue ? "bg-red-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+                          <span className={`badge ${overdue ? "bg-rose-600 text-white" : "bg-slate-800 text-slate-300"}`}>
                             {overdue ? "Vencida · " : ""}{t.due_date === today ? "Hoy" : fmtDate(t.due_date)}
                           </span>
                         )}
@@ -99,7 +99,7 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
           )}
         </section>
 
-        <form action={saveTask} className="card h-fit space-y-3 lg:sticky lg:top-8" key={editing?.id ?? "new"}>
+        <form action={saveTask} className="card h-fit flex flex-col gap-3 lg:sticky lg:top-8" key={editing?.id ?? "new"}>
           <h2 className="h2">{editing ? "Editar tarea" : "Nueva tarea"}</h2>
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <input type="hidden" name="back" value={back} />

@@ -70,16 +70,16 @@ export interface ShoppingItem {
 }
 
 export const EVENT_TYPES: Record<EventType, { label: string; color: string }> = {
-  reunion: { label: "Reunión", color: "bg-blue-100 text-blue-800" },
-  evento: { label: "Evento", color: "bg-violet-100 text-violet-800" },
-  cita: { label: "Cita", color: "bg-amber-100 text-amber-800" },
-  otro: { label: "Otro", color: "bg-slate-100 text-slate-700" },
+  reunion: { label: "Reunión", color: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30" },
+  evento: { label: "Evento", color: "bg-violet-500/15 text-violet-300 border-violet-500/30" },
+  cita: { label: "Cita", color: "bg-sky-500/15 text-sky-300 border-sky-500/30" },
+  otro: { label: "Otro", color: "bg-slate-800 text-slate-300 border-slate-700" },
 };
 
 export const PRIORITIES: Record<Priority, { label: string; color: string; order: number }> = {
-  alta: { label: "Alta", color: "bg-red-100 text-red-700", order: 0 },
-  media: { label: "Media", color: "bg-amber-100 text-amber-700", order: 1 },
-  baja: { label: "Baja", color: "bg-slate-100 text-slate-600", order: 2 },
+  alta: { label: "Alta", color: "bg-rose-500/15 text-rose-300 border-rose-500/30", order: 0 },
+  media: { label: "Media", color: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30", order: 1 },
+  baja: { label: "Baja", color: "bg-slate-800 text-slate-300 border-slate-700", order: 2 },
 };
 
 export const EXPENSE_CATEGORIES = [
@@ -90,9 +90,9 @@ export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Ventas", "Regalos", "
 export const SAVINGS_CATEGORIES = ["Ahorro común", "Inversión", "Fondo de emergencia"];
 
 export const KINDS = {
-  gasto: { label: "Gasto", plural: "Gastos", sign: "−", color: "text-red-600" },
-  ingreso: { label: "Ingreso", plural: "Ingresos", sign: "+", color: "text-emerald-600" },
-  ahorro: { label: "Ahorro", plural: "Ahorro", sign: "→", color: "text-sky-600" },
+  gasto: { label: "Gasto", plural: "Gastos", sign: "−", color: "text-rose-400" },
+  ingreso: { label: "Ingreso", plural: "Ingresos", sign: "+", color: "text-emerald-400" },
+  ahorro: { label: "Ahorro", plural: "Ahorro", sign: "→", color: "text-sky-400" },
 } as const;
 
 // ---------- Entrenamientos ----------
@@ -100,11 +100,11 @@ export const KINDS = {
 export type Sport = "bici" | "carrera" | "gimnasio" | "natacion" | "otro";
 
 export const SPORTS: Record<Sport, { label: string; icon: string; badge: string; bar: string }> = {
-  bici: { label: "Bici", icon: "🚴", badge: "bg-orange-100 text-orange-800", bar: "bg-orange-400" },
-  carrera: { label: "Carrera", icon: "🏃", badge: "bg-emerald-100 text-emerald-800", bar: "bg-emerald-500" },
-  gimnasio: { label: "Gimnasio", icon: "🏋️", badge: "bg-violet-100 text-violet-800", bar: "bg-violet-500" },
-  natacion: { label: "Natación", icon: "🏊", badge: "bg-sky-100 text-sky-800", bar: "bg-sky-500" },
-  otro: { label: "Otro", icon: "⚡", badge: "bg-slate-100 text-slate-700", bar: "bg-slate-400" },
+  bici: { label: "Bici", icon: "🚴", badge: "bg-orange-500/15 text-orange-300 border-orange-500/30", bar: "bg-orange-400" },
+  carrera: { label: "Carrera", icon: "🏃", badge: "bg-amber-500/15 text-amber-300 border-amber-500/30", bar: "bg-amber-400" },
+  gimnasio: { label: "Gimnasio", icon: "🏋️", badge: "bg-violet-500/15 text-violet-300 border-violet-500/30", bar: "bg-violet-500" },
+  natacion: { label: "Natación", icon: "🏊", badge: "bg-sky-500/15 text-sky-300 border-sky-500/30", bar: "bg-sky-500" },
+  otro: { label: "Otro", icon: "⚡", badge: "bg-slate-800 text-slate-300 border-slate-700", bar: "bg-slate-500" },
 };
 
 export const isSport = (s: string | undefined | null): s is Sport => !!s && s in SPORTS;
@@ -168,3 +168,15 @@ export interface WorkoutSet {
   is_warmup: boolean;
   source: "garmin" | "manual";
 }
+
+export type PlanSport = Sport | "descanso";
+
+export interface PlanDay {
+  id: string;
+  weekday: number;
+  sport: PlanSport;
+  title: string;
+  details: string | null;
+}
+
+export const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];

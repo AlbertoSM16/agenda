@@ -68,15 +68,15 @@ export default async function ExercisesPage({ searchParams }: { searchParams: SP
           {summary.length === 0 ? (
             <Empty>Aún no hay ejercicios. Se crean al apuntar series en un entreno de gimnasio.</Empty>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-800/70">
               {summary.map((e) => (
                 <li key={e.id}>
                   <Link
                     href={`/entrenos/ejercicios?ex=${e.id}`}
-                    className={`flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm hover:bg-slate-50 ${e.id === sp.ex ? "bg-indigo-50 font-medium text-indigo-700" : ""}`}
+                    className={`flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm hover:bg-slate-800/50 ${e.id === sp.ex ? "bg-indigo-500/10 font-medium text-indigo-300" : ""}`}
                   >
                     <span className="truncate">{e.name}</span>
-                    <span className="shrink-0 text-xs text-slate-500">
+                    <span className="shrink-0 text-xs text-slate-400">
                       {e.sessions.length} ses.{e.best ? ` · 1RM ${fmtNum(e.best, 1)}` : ""}
                     </span>
                   </Link>
@@ -95,7 +95,7 @@ export default async function ExercisesPage({ searchParams }: { searchParams: SP
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-semibold">{selected.name}</h2>
-                    {selected.muscle_group && <p className="text-xs text-slate-500">{selected.muscle_group}</p>}
+                    {selected.muscle_group && <p className="text-xs text-slate-400">{selected.muscle_group}</p>}
                   </div>
                   <div className="flex gap-2">
                     <Link href={`/entrenos/ejercicios?ex=${selected.id}&editar=1`} className="btn btn-sm">Renombrar</Link>
@@ -104,7 +104,7 @@ export default async function ExercisesPage({ searchParams }: { searchParams: SP
                 </div>
 
                 {sp.editar === "1" && (
-                  <form action={saveExercise} className="mb-4 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto]">
+                  <form action={saveExercise} className="mb-4 grid gap-2 rounded-lg bg-slate-950/60 p-3 sm:grid-cols-[1fr_1fr_auto]">
                     <input type="hidden" name="id" value={selected.id} />
                     <input type="hidden" name="back" value={`/entrenos/ejercicios?ex=${selected.id}`} />
                     <Field label="Nombre"><input className="input" name="name" required defaultValue={selected.name} /></Field>
@@ -119,16 +119,16 @@ export default async function ExercisesPage({ searchParams }: { searchParams: SP
                   <Stat label="Sesiones" value={String(selected.sessions.length)} />
                 </div>
 
-                <h3 className="mb-2 text-sm font-medium text-slate-700">1RM estimado por sesión (últimas {recent.length})</h3>
+                <h3 className="mb-2 text-sm font-medium text-slate-200">1RM estimado por sesión (últimas {recent.length})</h3>
                 {recent.length === 0 ? (
                   <Empty>Sin series registradas</Empty>
                 ) : (
                   <div className="flex h-40 items-end gap-1">
                     {recent.map((s) => (
                       <Link key={s.workoutId} href={`/entrenos/${s.workoutId}`} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${fmtDate(s.date)}: ${fmtNum(s.best, 1)} kg`}>
-                        <span className="text-[10px] text-slate-500">{fmtNum(s.best, 0)}</span>
+                        <span className="text-[10px] text-slate-400">{fmtNum(s.best, 0)}</span>
                         <div className="w-full rounded-t bg-violet-500 hover:bg-violet-600" style={{ height: `${(s.best / maxBest) * 100}%` }} />
-                        <span className="text-[10px] text-slate-500">{fmtDate(s.date, { day: "numeric", month: "numeric" })}</span>
+                        <span className="text-[10px] text-slate-400">{fmtDate(s.date, { day: "numeric", month: "numeric" })}</span>
                       </Link>
                     ))}
                   </div>
@@ -137,14 +137,14 @@ export default async function ExercisesPage({ searchParams }: { searchParams: SP
 
               <section className="card">
                 <h2 className="h2">Historial</h2>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-slate-800/70">
                   {[...selected.sessions].reverse().map((s) => (
                     <li key={s.workoutId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 text-sm">
-                      <Link href={`/entrenos/${s.workoutId}`} className="w-28 shrink-0 capitalize text-indigo-600">{fmtDate(s.date)}</Link>
-                      <span className="flex-1 text-slate-700">
+                      <Link href={`/entrenos/${s.workoutId}`} className="w-28 shrink-0 capitalize text-indigo-400">{fmtDate(s.date)}</Link>
+                      <span className="flex-1 text-slate-200">
                         {s.sets.map((x) => `${fmtNum(x.reps)}×${x.kg ? fmtNum(x.kg, 2) : "—"}`).join("  ·  ")}
                       </span>
-                      <span className="text-xs text-slate-500">vol. {fmtNum(s.volume)} kg</span>
+                      <span className="text-xs text-slate-400">vol. {fmtNum(s.volume)} kg</span>
                     </li>
                   ))}
                 </ul>
@@ -159,8 +159,8 @@ export default async function ExercisesPage({ searchParams }: { searchParams: SP
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-2">
-      <p className="text-xs text-slate-500">{label}</p>
+    <div className="rounded-lg bg-slate-950/60 p-2">
+      <p className="text-xs text-slate-400">{label}</p>
       <p className="text-lg font-semibold">{value}</p>
     </div>
   );

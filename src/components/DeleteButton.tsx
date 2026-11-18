@@ -7,7 +7,7 @@ export default function DeleteButton({ table, id, back }: { table: string; id: s
       <input type="hidden" name="table" value={table} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="back" value={back} />
-      <SubmitButton className="btn btn-sm text-red-600" confirmText="¿Seguro que quieres borrarlo?">
+      <SubmitButton className="btn btn-sm text-rose-400" confirmText="¿Seguro que quieres borrarlo?">
         Borrar
       </SubmitButton>
     </form>

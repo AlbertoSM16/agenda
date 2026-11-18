@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
 import { back, num, required, str } from "./form";
+import { addDays, nowLocalISO, weekdayOf } from "./format";
 import { isSport } from "./types";
 import { encrypt, decrypt } from "./garmin/crypto";
 import { parsePastedTokens, profileName } from "./garmin/api";
@@ -233,4 +234,77 @@ export async function saveExercise(fd: FormData) {
   }
   revalidatePath("/entrenos", "layout");
   redirect(back(fd, "/entrenos/ejercicios"));
+}
+
+// ---------- Plan semanal ----------
+
+export async function savePlan(fd: FormData) {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  const rows: { user_id: string; weekday: number; sport: string; title: string; details: string | null }[] = [];
+  const empty: number[] = [];
+  for (let d = 0; d < 7; d++) {
+    const title = str(fd, `title_${d}`);
+    const sport = str(fd, `sport_${d}`) ?? "gimnasio";
+    if (!title) { empty.push(d); continue; }
+    rows.push({ user_id: userId, weekday: d, sport: isSport(sport) || sport === "descanso" ? sport : "otro", title, details: str(fd, `details_${d}`) });
+  }
+  if (rows.length) {
+    const { error } = await supabase.from("training_plan").upsert(rows, { onConflict: "user_id,weekday" });
+    if (error) throw new Error(error.message);
+  }
+  if (empty.length) {
+    const { error } = await supabase.from("training_plan").delete().in("weekday", empty);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath("/", "layout");
+  redirect("/entrenos");
+}
+
+/** Registro rápido: añade N series de un ejercicio a la sesión de gimnasio de hoy (la crea si no existe). */
+export async function quickGymLog(fd: FormData) {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  const name = required(str(fd, "exercise"), "ejercicio");
+  const sets = Math.min(20, Math.max(1, Math.round(num(fd, "sets") ?? 1)));
+  const reps = num(fd, "reps");
+  const weight = num(fd, "weight");
+  const now = nowLocalISO();
+  const today = now.slice(0, 10);
+
+  const { data: existing } = await supabase
+    .from("workouts").select("id").eq("sport", "gimnasio")
+    .gte("started_at", today).lt("started_at", addDays(today, 1))
+    .order("started_at", { ascending: false }).limit(1).maybeSingle();
+
+  let workoutId = existing?.id as string | undefined;
+  if (!workoutId) {
+    const { data: plan } = await supabase.from("training_plan").select("title, sport").eq("weekday", weekdayOf(today)).maybeSingle();
+    const { data, error } = await supabase
+      .from("workouts")
+      .insert({ user_id: userId, source: "manual", sport: "gimnasio", title: plan?.sport === "gimnasio" ? plan.title : str(fd, "title") ?? "Fuerza", started_at: now })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    workoutId = data.id;
+  }
+
+  let { data: ex } = await supabase.from("exercises").select("id").ilike("name", name.replace(/[%_]/g, "\\$&")).limit(1).maybeSingle();
+  if (!ex) {
+    const { data, error } = await supabase.from("exercises").insert({ user_id: userId, name }).select("id").single();
+    if (error) throw new Error(error.message);
+    ex = data;
+  }
+
+  const { data: last } = await supabase.from("workout_sets").select("set_index").eq("workout_id", workoutId)
+    .order("set_index", { ascending: false }).limit(1).maybeSingle();
+  const start = (last?.set_index ?? -1) + 1;
+  const { error } = await supabase.from("workout_sets").insert(
+    Array.from({ length: sets }, (_, i) => ({
+      user_id: userId, workout_id: workoutId, exercise_id: ex!.id, set_index: start + i,
+      reps: reps === null ? null : Math.round(reps), weight_kg: weight,
+    })),
+  );
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  redirect(`/entrenos?deporte=gimnasio&serie=${encodeURIComponent(name)}`);
 }

@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { dbError } from "@/lib/db";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -61,14 +62,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
     <div>
       <DbError message={dbError(mainRes, editRes)} />
       <PageHeader title="Calendario">
-        <Link href={`/calendario?month=${addMonths(ym, -1)}`} className="btn">←</Link>
-        <span className="min-w-36 text-center font-medium capitalize">{monthLabel(ym)}</span>
-        <Link href={`/calendario?month=${addMonths(ym, 1)}`} className="btn">→</Link>
+        <Link href={`/calendario?month=${addMonths(ym, -1)}`} className="btn" aria-label="Mes anterior"><ChevronLeft className="h-4 w-4" /></Link>
+        <span className="min-w-36 text-center font-medium">{monthLabel(ym)}</span>
+        <Link href={`/calendario?month=${addMonths(ym, 1)}`} className="btn" aria-label="Mes siguiente"><ChevronRight className="h-4 w-4" /></Link>
         <Link href="/calendario" className="btn">Hoy</Link>
       </PageHeader>
 
       {gcalMsg && (
-        <p className={`mb-4 rounded-lg p-3 text-sm ${gcalMsg.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"}`}>
+        <p className={`mb-4 rounded-lg p-3 text-sm ${gcalMsg.ok ? "bg-emerald-500/10 text-emerald-300" : "bg-rose-500/10 text-rose-300"}`}>
           {gcalMsg.text}
         </p>
       )}
@@ -85,7 +86,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
                 <SubmitButton className="btn btn-sm">Sincronizar eventos futuros</SubmitButton>
               </form>
               <form action={disconnectGoogle}>
-                <SubmitButton className="btn btn-sm text-red-600" confirmText="¿Desconectar Google Calendar? Los eventos ya creados en Google se quedarán allí.">
+                <SubmitButton className="btn btn-sm text-rose-400" confirmText="¿Desconectar Google Calendar? Los eventos ya creados en Google se quedarán allí.">
                   Desconectar
                 </SubmitButton>
               </form>
@@ -93,7 +94,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
           ) : googleConfigured() ? (
             <a href="/api/google/connect" className="btn-primary btn-sm">Conectar Google Calendar</a>
           ) : (
-            <span className="text-xs text-slate-500">Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET (ver README)</span>
+            <span className="text-xs text-slate-400">Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET (ver README)</span>
           )}
         </div>
       </div>
@@ -101,7 +102,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <div className="card p-2 sm:p-4">
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500">
+            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400">
               {WEEKDAYS.map((w) => <div key={w} className="py-1">{w}</div>)}
             </div>
             <div className="grid grid-cols-7 gap-1">
@@ -112,10 +113,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
                   <div
                     key={d}
                     className={`min-h-16 rounded-lg border p-1 sm:min-h-24 ${
-                      d === today ? "border-indigo-400 bg-indigo-50" : d === sp.day ? "border-indigo-300" : "border-slate-100"
+                      d === today ? "border-indigo-500/60 bg-indigo-500/10" : d === sp.day ? "border-indigo-500/50" : "border-slate-800"
                     }`}
                   >
-                    <Link href={`/calendario?month=${ym}&day=${d}`} className="block text-xs font-medium text-slate-600 hover:text-indigo-600" title="Nuevo evento este día">
+                    <Link href={`/calendario?month=${ym}&day=${d}`} className="block text-xs font-medium text-slate-300 hover:text-indigo-300" title="Nuevo evento este día">
                       {Number(d.slice(8))}
                     </Link>
                     <div className="mt-0.5 space-y-0.5">
@@ -141,30 +142,30 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
             {events.length === 0 ? (
               <Empty>No hay eventos este mes</Empty>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-slate-800/70">
                 {events.map((e) => (
                   <li key={e.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="w-28 text-xs capitalize text-slate-500">
+                      <span className="w-28 text-xs capitalize text-slate-400">
                         {fmtDate(e.starts_at)} · {fmtTime(e.starts_at)}
                       </span>
                       <span className="flex-1 font-medium">{e.title}</span>
                       <span className={`badge ${EVENT_TYPES[e.type].color}`}>{EVENT_TYPES[e.type].label}</span>
-                      {e.google_event_id && <span className="badge bg-emerald-50 text-emerald-700" title="Sincronizado con Google Calendar">Google ✓</span>}
+                      {e.google_event_id && <span className="badge bg-emerald-500/10 text-emerald-300" title="Sincronizado con Google Calendar">Google ✓</span>}
                       <Link href={`${back}&edit=${e.id}`} className="btn btn-sm">Editar</Link>
                       <DeleteButton table="events" id={e.id} back={back} />
                     </div>
                     {(e.location || e.attendees) && (
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-slate-400">
                         {e.location && <>📍 {e.location} </>}
                         {e.attendees && <>👥 {e.attendees}</>}
                       </p>
                     )}
-                    {e.description && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{e.description}</p>}
+                    {e.description && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-200">{e.description}</p>}
                     {e.notes && (
                       <details className="mt-1 text-sm">
-                        <summary className="cursor-pointer text-xs text-indigo-600">Ver notas / acta</summary>
-                        <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 p-2">{e.notes}</p>
+                        <summary className="cursor-pointer text-xs text-indigo-400">Ver notas / acta</summary>
+                        <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-950/60 p-2">{e.notes}</p>
                       </details>
                     )}
                   </li>
@@ -174,7 +175,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
           </section>
         </div>
 
-        <form action={saveEvent} className="card h-fit space-y-3 lg:sticky lg:top-8" key={editing?.id ?? day}>
+        <form action={saveEvent} className="card h-fit flex flex-col gap-3 lg:sticky lg:top-8" key={editing?.id ?? day}>
           <h2 className="h2">{editing ? "Editar evento" : `Nuevo evento · ${fmtDate(day)}`}</h2>
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <input type="hidden" name="back" value={back} />

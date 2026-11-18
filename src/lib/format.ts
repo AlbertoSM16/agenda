@@ -34,7 +34,8 @@ export function fmtTime(s: string) {
 }
 
 export function monthLabel(ym: string) {
-  return new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(asUTC(`${ym}-01`));
+  const t = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(asUTC(`${ym}-01`));
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 export function eur(n: number | string | null | undefined) {
@@ -103,4 +104,19 @@ export function fmtKm(m: number | null | undefined, digits = 1) {
 export function fmtNum(n: number | null | undefined, digits = 0) {
   if (n === null || n === undefined || !Number.isFinite(Number(n))) return "—";
   return Number(n).toLocaleString("es-ES", { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+}
+
+/** Fecha y hora local actual "YYYY-MM-DDTHH:mm" en la zona horaria del usuario. */
+export function nowLocalISO() {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date())
+      .map((x) => [x.type, x.value]),
+  );
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+/** Día de la semana 0 = lunes … 6 = domingo. */
+export function weekdayOf(iso: string) {
+  return (asUTC(iso.slice(0, 10)).getUTCDay() + 6) % 7;
 }

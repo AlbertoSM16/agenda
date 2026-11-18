@@ -58,7 +58,7 @@ export default async function NotesPage({ searchParams }: { searchParams: SP }) 
             <Link
               key={t}
               href={t === tag ? "/notas" : `/notas?tag=${encodeURIComponent(t)}`}
-              className={`badge ${t === tag ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
+              className={`badge ${t === tag ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-200 hover:bg-slate-700"}`}
             >
               #{t} <span className="opacity-60">{n}</span>
             </Link>
@@ -67,7 +67,7 @@ export default async function NotesPage({ searchParams }: { searchParams: SP }) 
       )}
 
       {showForm && (
-        <form action={saveNote} className="card mb-6 space-y-3" key={editing?.id ?? "new"}>
+        <form action={saveNote} className="card mb-6 flex flex-col gap-3" key={editing?.id ?? "new"}>
           <h2 className="h2">{editing ? "Editar nota" : "Nueva nota"}</h2>
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <input type="hidden" name="back" value={back} />
@@ -93,15 +93,15 @@ export default async function NotesPage({ searchParams }: { searchParams: SP }) 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {notes.map((n) => (
             <article key={n.id} className="card flex flex-col">
-              <Link href={`${back}${back.includes("?") ? "&" : "?"}edit=${n.id}`} className="font-semibold hover:text-indigo-600">
+              <Link href={`${back}${back.includes("?") ? "&" : "?"}edit=${n.id}`} className="font-semibold hover:text-indigo-300">
                 {n.title}
               </Link>
-              <p className="mt-1 line-clamp-6 flex-1 whitespace-pre-wrap text-sm text-slate-600">{n.content}</p>
+              <p className="mt-1 line-clamp-6 flex-1 whitespace-pre-wrap text-sm text-slate-300">{n.content}</p>
               <div className="mt-3 flex flex-wrap items-center gap-1">
                 {n.tags.map((t) => (
-                  <Link key={t} href={`/notas?tag=${encodeURIComponent(t)}`} className="badge bg-slate-100 text-slate-600">#{t}</Link>
+                  <Link key={t} href={`/notas?tag=${encodeURIComponent(t)}`} className="badge bg-slate-800 text-slate-300">#{t}</Link>
                 ))}
-                <span className="ml-auto text-xs text-slate-400">{fmtDate(n.updated_at.slice(0, 10))}</span>
+                <span className="ml-auto text-xs text-slate-500">{fmtDate(n.updated_at.slice(0, 10))}</span>
                 <DeleteButton table="notes" id={n.id} back={back} />
               </div>
             </article>

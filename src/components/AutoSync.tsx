@@ -24,5 +24,5 @@ export default function AutoSync() {
       .catch((e) => setMsg(`⚠️ ${String(e)}`));
   }, [router]);
 
-  return <span className="text-xs text-slate-500">{msg}</span>;
+  return <span className="text-xs text-slate-400">{msg}</span>;
 }

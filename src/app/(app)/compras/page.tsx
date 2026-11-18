@@ -29,7 +29,7 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
     <div>
       <DbError message={dbError(mainRes)} />
       <PageHeader title="Lista de compras">
-        <span className="text-sm text-slate-600">{pending.length} pendientes · <b>{eur(total)}</b> estimado</span>
+        <span className="text-sm text-slate-300">{pending.length} pendientes · <b>{eur(total)}</b> estimado</span>
       </PageHeader>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -39,26 +39,26 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
             {pending.length === 0 ? (
               <Empty>Tu lista está vacía</Empty>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-slate-800/70">
                 {pending.map((i) => (
                   <li key={i.id} className="py-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`badge ${PRIORITIES[i.priority].color}`}>{PRIORITIES[i.priority].label}</span>
                       <span className="flex-1 font-medium">
-                        {i.url ? <a href={i.url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 hover:underline">{i.name} ↗</a> : i.name}
+                        {i.url ? <a href={i.url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-300 hover:underline">{i.name} ↗</a> : i.name}
                       </span>
-                      {i.estimated_price !== null && <span className="text-sm text-slate-600">{eur(i.estimated_price)}</span>}
+                      {i.estimated_price !== null && <span className="text-sm text-slate-300">{eur(i.estimated_price)}</span>}
                     </div>
-                    {i.notes && <p className="mt-1 whitespace-pre-wrap text-xs text-slate-500">{i.notes}</p>}
+                    {i.notes && <p className="mt-1 whitespace-pre-wrap text-xs text-slate-400">{i.notes}</p>}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <form action={buyShoppingItem} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-1">
+                      <form action={buyShoppingItem} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-950/60 p-1">
                         <input type="hidden" name="id" value={i.id} />
                         <input type="hidden" name="back" value={back} />
                         <input className="input w-24 py-1" name="price" type="number" step="0.01" min="0" placeholder="Precio" defaultValue={i.estimated_price ?? ""} aria-label="Precio pagado" />
-                        <label className="flex items-center gap-1 text-xs text-slate-600">
+                        <label className="flex items-center gap-1 text-xs text-slate-300">
                           <input type="checkbox" name="register" defaultChecked /> Apuntar gasto
                         </label>
-                        <SubmitButton className="btn btn-sm border-emerald-500 text-emerald-700">✓ Comprado</SubmitButton>
+                        <SubmitButton className="btn btn-sm border-emerald-500 text-emerald-300">✓ Comprado</SubmitButton>
                       </form>
                       <Link href={`${back}?edit=${i.id}`} className="btn btn-sm">Editar</Link>
                       <form action={setShoppingStatus}>
@@ -76,13 +76,13 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
 
           {bought.length > 0 && (
             <details className="card">
-              <summary className="cursor-pointer font-semibold text-slate-700">Comprado ({bought.length})</summary>
-              <ul className="mt-3 divide-y divide-slate-100">
+              <summary className="cursor-pointer font-semibold text-slate-200">Comprado ({bought.length})</summary>
+              <ul className="mt-3 divide-y divide-slate-800/70">
                 {bought.map((i) => (
                   <li key={i.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                    <span className="flex-1 text-slate-500 line-through">{i.name}</span>
-                    {i.estimated_price !== null && <span className="text-slate-500">{eur(i.estimated_price)}</span>}
-                    {i.purchased_at && <span className="text-xs text-slate-400">{fmtDate(i.purchased_at)}</span>}
+                    <span className="flex-1 text-slate-400 line-through">{i.name}</span>
+                    {i.estimated_price !== null && <span className="text-slate-400">{eur(i.estimated_price)}</span>}
+                    {i.purchased_at && <span className="text-xs text-slate-500">{fmtDate(i.purchased_at)}</span>}
                     <DeleteButton table="shopping_items" id={i.id} back={back} />
                   </li>
                 ))}
@@ -92,11 +92,11 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
 
           {discarded.length > 0 && (
             <details className="card">
-              <summary className="cursor-pointer font-semibold text-slate-700">Descartado ({discarded.length})</summary>
-              <ul className="mt-3 divide-y divide-slate-100">
+              <summary className="cursor-pointer font-semibold text-slate-200">Descartado ({discarded.length})</summary>
+              <ul className="mt-3 divide-y divide-slate-800/70">
                 {discarded.map((i) => (
                   <li key={i.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                    <span className="flex-1 text-slate-500">{i.name}</span>
+                    <span className="flex-1 text-slate-400">{i.name}</span>
                     <form action={setShoppingStatus}>
                       <input type="hidden" name="id" value={i.id} />
                       <input type="hidden" name="status" value="pendiente" />
@@ -111,7 +111,7 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
           )}
         </div>
 
-        <form action={saveShoppingItem} className="card h-fit space-y-3 lg:sticky lg:top-8" key={editing?.id ?? "new"}>
+        <form action={saveShoppingItem} className="card h-fit flex flex-col gap-3 lg:sticky lg:top-8" key={editing?.id ?? "new"}>
           <h2 className="h2">{editing ? "Editar artículo" : "Añadir a la lista"}</h2>
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <input type="hidden" name="back" value={back} />
