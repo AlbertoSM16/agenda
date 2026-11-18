@@ -11,7 +11,24 @@ export interface AgendaEvent {
   attendees: string | null;
   description: string | null;
   notes: string | null;
+  google_event_id: string | null;
+  reminder_minutes: number | null;
 }
+
+export const REMINDER_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Predeterminado de Google" },
+  { value: "-1", label: "Sin aviso" },
+  { value: "0", label: "A la hora del evento" },
+  { value: "5", label: "5 minutos antes" },
+  { value: "10", label: "10 minutos antes" },
+  { value: "15", label: "15 minutos antes" },
+  { value: "30", label: "30 minutos antes" },
+  { value: "60", label: "1 hora antes" },
+  { value: "120", label: "2 horas antes" },
+  { value: "1440", label: "1 día antes" },
+  { value: "2880", label: "2 días antes" },
+  { value: "10080", label: "1 semana antes" },
+];
 
 export interface Task {
   id: string;
@@ -33,7 +50,7 @@ export interface Note {
 
 export interface Transaction {
   id: string;
-  kind: "gasto" | "ingreso";
+  kind: "gasto" | "ingreso" | "ahorro";
   amount: number;
   category: string;
   description: string | null;
@@ -70,3 +87,10 @@ export const EXPENSE_CATEGORIES = [
   "Ocio", "Salud", "Ropa", "Tecnología", "Suscripciones", "Regalos", "Formación", "Compras", "Otros",
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Ventas", "Regalos", "Intereses", "Otros"];
+export const SAVINGS_CATEGORIES = ["Ahorro común", "Inversión", "Fondo de emergencia"];
+
+export const KINDS = {
+  gasto: { label: "Gasto", plural: "Gastos", sign: "−", color: "text-red-600" },
+  ingreso: { label: "Ingreso", plural: "Ingresos", sign: "+", color: "text-emerald-600" },
+  ahorro: { label: "Ahorro", plural: "Ahorro", sign: "→", color: "text-sky-600" },
+} as const;

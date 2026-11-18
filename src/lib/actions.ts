@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
 import { todayISO } from "./format";
+import { deleteGoogleEvent, googleSession, revokeToken, upsertGoogleEvent } from "./google";
+import type { AgendaEvent } from "./types";
 
 const TABLES = ["events", "tasks", "notes", "transactions", "shopping_items"] as const;
 type Table = (typeof TABLES)[number];
@@ -65,7 +67,11 @@ export async function logout() {
 // ---------- Eventos ----------
 
 export async function saveEvent(fd: FormData) {
-  await save("events", fd, {
+  const supabase = await createClient();
+  const id = str(fd, "id");
+  const reminder = str(fd, "reminder_minutes");
+  const reminderMinutes = reminder === null ? null : Math.max(-1, Math.trunc(Number(reminder)) || 0);
+  const data = {
     title: required(str(fd, "title"), "título"),
     type: str(fd, "type") ?? "evento",
     starts_at: required(str(fd, "starts_at"), "inicio"),
@@ -74,7 +80,61 @@ export async function saveEvent(fd: FormData) {
     attendees: str(fd, "attendees"),
     description: str(fd, "description"),
     notes: str(fd, "notes"),
-  }, "/calendario");
+    reminder_minutes: reminderMinutes,
+  };
+  const { data: saved, error } = id
+    ? await supabase.from("events").update(data).eq("id", id).select().single()
+    : await supabase.from("events").insert(data).select().single();
+  if (error) throw new Error(error.message);
+
+  const gcal = await syncToGoogle(supabase, [saved as AgendaEvent]);
+  revalidatePath("/", "layout");
+  redirect(withParam(back(fd, "/calendario"), gcal === "error" ? "gcal=error_sync" : null));
+}
+
+/** Sube eventos a Google Calendar si la cuenta está conectada. Nunca lanza: devuelve el resultado. */
+async function syncToGoogle(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  events: AgendaEvent[],
+): Promise<"off" | "ok" | "error"> {
+  try {
+    const g = await googleSession(supabase);
+    if (!g) return "off";
+    for (const e of events) {
+      const googleId = await upsertGoogleEvent(g, e);
+      if (googleId !== e.google_event_id) {
+        await supabase.from("events").update({ google_event_id: googleId }).eq("id", e.id);
+      }
+    }
+    return "ok";
+  } catch (err) {
+    console.error("Google Calendar sync:", err);
+    return "error";
+  }
+}
+
+function withParam(path: string, param: string | null) {
+  if (!param) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}${param}`;
+}
+
+export async function syncAllEvents() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").select("*").gte("starts_at", todayISO()).order("starts_at");
+  if (error) throw new Error(error.message);
+  const result = await syncToGoogle(supabase, (data ?? []) as AgendaEvent[]);
+  revalidatePath("/", "layout");
+  redirect(`/calendario?gcal=${result === "ok" ? `sincronizado&n=${data?.length ?? 0}` : "error_sync"}`);
+}
+
+export async function disconnectGoogle() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("google_accounts").select("refresh_token").maybeSingle();
+  if (data) await revokeToken(data.refresh_token);
+  await supabase.from("google_accounts").delete().not("user_id", "is", null);
+  await supabase.from("events").update({ google_event_id: null }).not("google_event_id", "is", null);
+  revalidatePath("/", "layout");
+  redirect("/calendario?gcal=desconectado");
 }
 
 // ---------- Tareas ----------
@@ -123,7 +183,7 @@ export async function saveTransaction(fd: FormData) {
   const amount = required(num(fd, "amount"), "importe");
   if (amount <= 0) throw new Error("El importe debe ser mayor que 0");
   await save("transactions", fd, {
-    kind: str(fd, "kind") === "ingreso" ? "ingreso" : "gasto",
+    kind: (["ingreso", "ahorro"] as const).find((k) => k === str(fd, "kind")) ?? "gasto",
     amount,
     category: str(fd, "category") ?? "Otros",
     description: str(fd, "description"),
@@ -191,8 +251,24 @@ export async function deleteRow(fd: FormData) {
   const table = str(fd, "table") as Table | null;
   if (!table || !TABLES.includes(table)) throw new Error("Tabla no válida");
   const supabase = await createClient();
-  const { error } = await supabase.from(table).delete().eq("id", required(str(fd, "id"), "id"));
+  const id = required(str(fd, "id"), "id");
+  let gcalError = false;
+
+  if (table === "events") {
+    const { data: ev } = await supabase.from("events").select("google_event_id").eq("id", id).maybeSingle();
+    if (ev?.google_event_id) {
+      try {
+        const g = await googleSession(supabase);
+        if (g) await deleteGoogleEvent(g, ev.google_event_id);
+      } catch (err) {
+        console.error("Google Calendar delete:", err);
+        gcalError = true;
+      }
+    }
+  }
+
+  const { error } = await supabase.from(table).delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/", "layout");
-  redirect(back(fd, "/"));
+  redirect(withParam(back(fd, "/"), gcalError ? "gcal=error_sync" : null));
 }

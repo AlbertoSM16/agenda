@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { addMonths, eur, fmtDate, isYearMonth, monthLabel, todayISO } from "@/lib/format";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type Transaction } from "@/lib/types";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, KINDS, SAVINGS_CATEGORIES, type Transaction } from "@/lib/types";
 import { saveTransaction } from "@/lib/actions";
 import { Empty, Field, PageHeader, Tabs } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
@@ -25,13 +25,15 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
 
   const income = all.filter((t) => t.kind === "ingreso").reduce((s, t) => s + t.amount, 0);
   const expense = all.filter((t) => t.kind === "gasto").reduce((s, t) => s + t.amount, 0);
+  const savings = all.filter((t) => t.kind === "ahorro").reduce((s, t) => s + t.amount, 0);
+  const available = income - expense - savings;
 
   const byCat = new Map<string, number>();
   for (const t of all) if (t.kind === "gasto") byCat.set(t.category, (byCat.get(t.category) ?? 0) + t.amount);
   const cats = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
   const maxCat = cats[0]?.[1] ?? 1;
 
-  const tipo = sp.tipo === "gasto" || sp.tipo === "ingreso" ? sp.tipo : null;
+  const tipo = sp.tipo === "gasto" || sp.tipo === "ingreso" || sp.tipo === "ahorro" ? sp.tipo : null;
   const list = all.filter((t) => (!sp.cat || t.category === sp.cat) && (!tipo || t.kind === tipo));
 
   const base = `/finanzas?month=${ym}`;
@@ -46,10 +48,11 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
         <Link href={`/finanzas?month=${addMonths(ym, 1)}`} className="btn">→</Link>
       </PageHeader>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <div className="card"><p className="text-xs text-slate-500">Ingresos</p><p className="text-xl font-bold text-emerald-600">{eur(income)}</p></div>
         <div className="card"><p className="text-xs text-slate-500">Gastos</p><p className="text-xl font-bold text-red-600">{eur(expense)}</p></div>
-        <div className="card"><p className="text-xs text-slate-500">Balance</p><p className={`text-xl font-bold ${income - expense >= 0 ? "text-emerald-600" : "text-red-600"}`}>{eur(income - expense)}</p></div>
+        <div className="card"><p className="text-xs text-slate-500">Ahorrado</p><p className="text-xl font-bold text-sky-600">{eur(savings)}</p>{income > 0 && <p className="text-xs text-slate-500">{Math.round((savings / income) * 100)}% de los ingresos</p>}</div>
+        <div className="card"><p className="text-xs text-slate-500">Disponible</p><p className={`text-xl font-bold ${available >= 0 ? "text-emerald-600" : "text-red-600"}`}>{eur(available)}</p><p className="text-xs text-slate-500">ingresos − gastos − ahorro</p></div>
         <div className="card"><p className="text-xs text-slate-500">Gasto medio diario</p><p className="text-xl font-bold">{eur(expense / Math.max(daysElapsed, 1))}</p></div>
       </div>
 
@@ -88,6 +91,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
                     { href: `${base}${sp.cat ? `&cat=${encodeURIComponent(sp.cat)}` : ""}`, label: "Todos", active: !tipo },
                     { href: `${base}&tipo=gasto${sp.cat ? `&cat=${encodeURIComponent(sp.cat)}` : ""}`, label: "Gastos", active: tipo === "gasto" },
                     { href: `${base}&tipo=ingreso`, label: "Ingresos", active: tipo === "ingreso" },
+                    { href: `${base}&tipo=ahorro`, label: "Ahorro", active: tipo === "ahorro" },
                   ]}
                 />
               </div>
@@ -103,8 +107,8 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
                       <p className="truncate text-sm font-medium">{t.description || t.category}</p>
                       <p className="text-xs text-slate-500">{t.category}{t.payment_method ? ` · ${t.payment_method}` : ""}</p>
                     </div>
-                    <span className={`font-semibold ${t.kind === "gasto" ? "text-red-600" : "text-emerald-600"}`}>
-                      {t.kind === "gasto" ? "−" : "+"}{eur(t.amount)}
+                    <span className={`font-semibold ${KINDS[t.kind].color}`} title={KINDS[t.kind].label}>
+                      {KINDS[t.kind].sign}{eur(t.amount)}
                     </span>
                     <Link href={`${back}&edit=${t.id}`} className="btn btn-sm">Editar</Link>
                     <DeleteButton table="transactions" id={t.id} back={back} />
@@ -119,11 +123,11 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
           <h2 className="h2">{editing ? "Editar movimiento" : "Nuevo movimiento"}</h2>
           {editing && <input type="hidden" name="id" value={editing.id} />}
           <input type="hidden" name="back" value={back} />
-          <div className="grid grid-cols-2 gap-2">
-            {(["gasto", "ingreso"] as const).map((k) => (
+          <div className="grid grid-cols-3 gap-2">
+            {(["gasto", "ingreso", "ahorro"] as const).map((k) => (
               <label key={k} className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 p-2 text-sm has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
                 <input type="radio" name="kind" value={k} defaultChecked={(editing?.kind ?? tipo ?? "gasto") === k} />
-                {k === "gasto" ? "Gasto" : "Ingreso"}
+                {KINDS[k].label}
               </label>
             ))}
           </div>
@@ -138,7 +142,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
           <Field label="Categoría">
             <input className="input" name="category" list="categorias" defaultValue={editing?.category ?? sp.cat ?? ""} placeholder="Comida, Nómina…" />
             <datalist id="categorias">
-              {[...new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES])].map((c) => <option key={c} value={c} />)}
+              {[...new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES, ...SAVINGS_CATEGORIES])].map((c) => <option key={c} value={c} />)}
             </datalist>
           </Field>
           <Field label="Descripción">

@@ -51,3 +51,6 @@ next-env.d.ts
 .idea/workspace.xml
 .idea/modules.xml
 *.iml
+
+# Datos personales importados (no subir a GitHub)
+supabase/import_*.sql

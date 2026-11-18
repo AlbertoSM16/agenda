@@ -1,15 +1,26 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { addMonths, fmtDate, fmtTime, isYearMonth, monthLabel, toInputDT, todayISO } from "@/lib/format";
-import { EVENT_TYPES, type AgendaEvent } from "@/lib/types";
-import { saveEvent } from "@/lib/actions";
+import { EVENT_TYPES, REMINDER_OPTIONS, type AgendaEvent } from "@/lib/types";
+import { disconnectGoogle, saveEvent, syncAllEvents } from "@/lib/actions";
+import { googleConfigured } from "@/lib/google";
 import { Empty, Field, PageHeader } from "@/components/ui";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S", "D"];
 
-type SP = Promise<{ month?: string; day?: string; edit?: string }>;
+type SP = Promise<{ month?: string; day?: string; edit?: string; gcal?: string; n?: string }>;
+
+const GCAL_MESSAGES: Record<string, { text: string; ok: boolean }> = {
+  conectado: { text: "Google Calendar conectado. Los eventos nuevos y editados se sincronizarán solos.", ok: true },
+  sincronizado: { text: "Eventos futuros sincronizados con Google Calendar.", ok: true },
+  desconectado: { text: "Google Calendar desconectado.", ok: true },
+  cancelado: { text: "Conexión con Google cancelada.", ok: false },
+  error: { text: "No se pudo conectar con Google. Inténtalo de nuevo.", ok: false },
+  error_sync: { text: "El evento se guardó, pero falló la sincronización con Google Calendar. Prueba a reconectar la cuenta.", ok: false },
+  noconfig: { text: "Faltan GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en las variables de entorno.", ok: false },
+};
 
 export default async function CalendarPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -17,10 +28,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
   const ym = isYearMonth(sp.month) ? sp.month : (sp.day ?? today).slice(0, 7);
   const supabase = await createClient();
 
-  const [{ data }, editRes] = await Promise.all([
+  const [{ data }, editRes, googleRes] = await Promise.all([
     supabase.from("events").select("*").gte("starts_at", `${ym}-01`).lt("starts_at", `${addMonths(ym, 1)}-01`).order("starts_at"),
     sp.edit ? supabase.from("events").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from("google_accounts").select("email").maybeSingle(),
   ]);
+  const google = googleRes.data as { email: string | null } | null;
+  const gcalMsg = sp.gcal ? GCAL_MESSAGES[sp.gcal] : undefined;
   const events = (data ?? []) as AgendaEvent[];
   const editing = editRes.data as AgendaEvent | null;
 
@@ -50,6 +64,37 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
         <Link href={`/calendario?month=${addMonths(ym, 1)}`} className="btn">→</Link>
         <Link href="/calendario" className="btn">Hoy</Link>
       </PageHeader>
+
+      {gcalMsg && (
+        <p className={`mb-4 rounded-lg p-3 text-sm ${gcalMsg.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"}`}>
+          {gcalMsg.text}
+        </p>
+      )}
+
+      <div className="card mb-6 flex flex-wrap items-center gap-3 py-3">
+        <span className="text-sm">
+          📆 <b>Google Calendar:</b>{" "}
+          {google ? <>conectado{google.email ? ` (${google.email})` : ""}</> : "no conectado"}
+        </span>
+        <div className="ml-auto flex flex-wrap gap-2">
+          {google ? (
+            <>
+              <form action={syncAllEvents}>
+                <SubmitButton className="btn btn-sm">Sincronizar eventos futuros</SubmitButton>
+              </form>
+              <form action={disconnectGoogle}>
+                <SubmitButton className="btn btn-sm text-red-600" confirmText="¿Desconectar Google Calendar? Los eventos ya creados en Google se quedarán allí.">
+                  Desconectar
+                </SubmitButton>
+              </form>
+            </>
+          ) : googleConfigured() ? (
+            <a href="/api/google/connect" className="btn-primary btn-sm">Conectar Google Calendar</a>
+          ) : (
+            <span className="text-xs text-slate-500">Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET (ver README)</span>
+          )}
+        </div>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -103,6 +148,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
                       </span>
                       <span className="flex-1 font-medium">{e.title}</span>
                       <span className={`badge ${EVENT_TYPES[e.type].color}`}>{EVENT_TYPES[e.type].label}</span>
+                      {e.google_event_id && <span className="badge bg-emerald-50 text-emerald-700" title="Sincronizado con Google Calendar">Google ✓</span>}
                       <Link href={`${back}&edit=${e.id}`} className="btn btn-sm">Editar</Link>
                       <DeleteButton table="events" id={e.id} back={back} />
                     </div>
@@ -146,6 +192,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
               <input className="input" type="datetime-local" name="ends_at" defaultValue={toInputDT(editing?.ends_at)} />
             </Field>
           </div>
+          <Field label={google ? "Aviso (en Google Calendar)" : "Aviso (se aplica al conectar Google Calendar)"}>
+            <select className="input" name="reminder_minutes" defaultValue={editing ? (editing.reminder_minutes?.toString() ?? "") : "30"}>
+              {REMINDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Field>
           <Field label="Lugar">
             <input className="input" name="location" defaultValue={editing?.location ?? ""} placeholder="Oficina, Zoom…" />
           </Field>

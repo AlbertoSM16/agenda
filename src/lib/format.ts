@@ -8,7 +8,7 @@ export function todayISO(): string {
 }
 
 /** Convierte "YYYY-MM-DD" u "YYYY-MM-DDTHH:mm[:ss]" (hora local sin zona) a un Date en UTC para formatear sin desfases. */
-function asUTC(s: string): Date {
+export function asUTC(s: string): Date {
   const base = s.replace(" ", "T").slice(0, 19);
   return new Date(base.length <= 10 ? `${base}T00:00:00Z` : `${base}Z`);
 }
@@ -48,4 +48,11 @@ export function toInputDT(s: string | null | undefined) {
 
 export function isYearMonth(s: string | undefined): s is string {
   return !!s && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+}
+
+/** Suma minutos a una fecha-hora local sin zona ("YYYY-MM-DDTHH:mm[:ss]") y la devuelve como "YYYY-MM-DDTHH:mm:ss". */
+export function addMinutesLocal(s: string, minutes: number) {
+  const d = asUTC(s);
+  d.setUTCMinutes(d.getUTCMinutes() + minutes);
+  return d.toISOString().slice(0, 19);
 }

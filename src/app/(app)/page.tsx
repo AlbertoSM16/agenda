@@ -24,6 +24,8 @@ export default async function Dashboard() {
   const tk = (tasks.data ?? []) as Task[];
   const income = ((txs.data ?? []) as Transaction[]).filter((t) => t.kind === "ingreso").reduce((s, t) => s + Number(t.amount), 0);
   const expense = ((txs.data ?? []) as Transaction[]).filter((t) => t.kind === "gasto").reduce((s, t) => s + Number(t.amount), 0);
+  const savings = ((txs.data ?? []) as Transaction[]).filter((t) => t.kind === "ahorro").reduce((s, t) => s + Number(t.amount), 0);
+  const available = income - expense - savings;
   const shop = (shopping.data ?? []) as Pick<ShoppingItem, "estimated_price">[];
   const shopTotal = shop.reduce((s, i) => s + Number(i.estimated_price ?? 0), 0);
 
@@ -34,10 +36,11 @@ export default async function Dashboard() {
         <p className="text-sm text-slate-500">Resumen de tu día</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="Ingresos del mes" value={eur(income)} className="text-emerald-600" href="/finanzas" />
         <Stat label="Gastos del mes" value={eur(expense)} className="text-red-600" href="/finanzas" />
-        <Stat label="Balance" value={eur(income - expense)} className={income - expense >= 0 ? "text-emerald-600" : "text-red-600"} href="/finanzas" />
+        <Stat label="Ahorrado del mes" value={eur(savings)} className="text-sky-600" href="/finanzas" />
+        <Stat label="Disponible" value={eur(available)} className={available >= 0 ? "text-emerald-600" : "text-red-600"} href="/finanzas" />
         <Stat label={`Lista de compras (${shop.length})`} value={eur(shopTotal)} href="/compras" />
       </div>
 
