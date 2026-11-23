@@ -56,6 +56,20 @@ export interface Transaction {
   description: string | null;
   date: string;
   payment_method: string | null;
+  recurring_id?: string | null;
+}
+
+/** Gasto fijo mensual (alquiler, gimnasio…). */
+export interface RecurringTransaction {
+  id: string;
+  kind: Transaction["kind"];
+  amount: number;
+  category: string;
+  description: string;
+  payment_method: string | null;
+  day_of_month: number;
+  start_month: string; // YYYY-MM-01
+  last_month: string | null; // último mes generado (YYYY-MM-01)
 }
 
 export interface ShoppingItem {

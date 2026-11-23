@@ -54,8 +54,8 @@ scripts/garmin-login.ts           se ejecuta con Node (strip-types); excluido de
 
 ## Base de datos (Supabase)
 - Cada tabla: `id uuid`, `user_id uuid default auth.uid()`, RLS con la política `"solo propietario"` y **`grant select, insert, update, delete … to authenticated`**. Los proyectos nuevos de Supabase NO dan permisos automáticos a la API: sin el GRANT, las consultas fallan con *permission denied* y la app sale vacía.
-- Las migraciones nuevas van en `supabase/migrations/000N_nombre.sql` (la siguiente es la **0007**). Recuérdale al usuario que tiene que ejecutarlas en el SQL Editor; no hay CLI de Supabase conectada.
-- Tablas: `events`, `tasks`, `notes` (con `fts` en español), `transactions` (`kind`: gasto | ingreso | ahorro), `shopping_items`, `google_accounts`, `garmin_accounts`, `workouts`, `exercises`, `workout_sets`, `training_plan`.
+- Las migraciones nuevas van en `supabase/migrations/000N_nombre.sql` (la siguiente es la **0008**). Recuérdale al usuario que tiene que ejecutarlas en el SQL Editor; no hay CLI de Supabase conectada.
+- Tablas: `events`, `tasks`, `notes` (con `fts` en español), `transactions` (`kind`: gasto | ingreso | ahorro), `recurring_transactions` (gastos fijos; los genera `ensureRecurring` en `src/lib/recurring.ts` al abrir Finanzas o el Resumen), `shopping_items`, `google_accounts`, `garmin_accounts`, `workouts`, `exercises`, `workout_sets`, `training_plan`.
 - Para probar una migración: Postgres en Docker con un esquema `auth` simulado (`auth.users`, `auth.uid()` leyendo `request.jwt.claim.sub`, roles `authenticated`/`anon`).
 - `supabase/import_*.sql` lleva **datos personales**: está en `.gitignore`. No lo subas nunca.
 
@@ -90,7 +90,7 @@ scripts/garmin-login.ts           se ejecuta con Node (strip-types); excluido de
 ## Ideas pendientes / mejoras propuestas
 - Botón "+" flotante de alta rápida en móvil y menú inferior tipo app.
 - PWA (instalable, icono en la pantalla de inicio).
-- Presupuestos por categoría con aviso al pasarse; gastos recurrentes (alquiler, suscripciones).
+- Presupuestos por categoría con aviso al pasarse.
 - Exportar movimientos o entrenos a CSV.
 - Sincronización con Garmin programada con Vercel Cron (necesitaría `SUPABASE_SERVICE_ROLE_KEY`).
 - Agenda: vista de día con línea de tiempo (como en el diseño original) y completar eventos.

@@ -8,6 +8,7 @@ import {
   type AgendaEvent, type PlanDay, type ShoppingItem, type Task, type Transaction, type Workout,
 } from "@/lib/types";
 import { toggleTask } from "@/lib/actions";
+import { ensureRecurring } from "@/lib/recurring";
 import { currentPeriodYm, loadPaydays, period, periodLabel } from "@/lib/periods";
 import { CardTitle, DbError, Empty, Kpi, PageHeader } from "@/components/ui";
 
@@ -22,7 +23,10 @@ export default async function Dashboard() {
   const week0 = mondayOf(today);
   const since = week0 < monthStart ? week0 : monthStart;
 
-  const { paydays, res: payRes } = await loadPaydays(supabase, addMonths(ym, -1), addMonths(ym, 1));
+  const [{ paydays, res: payRes }, { res: recRes }] = await Promise.all([
+    loadPaydays(supabase, addMonths(ym, -1), addMonths(ym, 1)),
+    ensureRecurring(supabase, today), // apunta los gastos fijos que ya tocan
+  ]);
   const pay = period(currentPeriodYm(paydays, today), paydays, today);
 
   const [events, tasks, txs, lastTxs, shopping, trainings, plan] = await Promise.all([
@@ -75,7 +79,7 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <DbError message={dbError(payRes, events, tasks, txs, lastTxs, shopping, trainings, plan)} />
+      <DbError message={dbError(payRes, recRes, events, tasks, txs, lastTxs, shopping, trainings, plan)} />
       <PageHeader title="Resumen general">
         <QuickAction href={`/calendario?day=${today}`} color="indigo" label="Evento" />
         <QuickAction href="/finanzas#nuevo" color="emerald" label="Movimiento €" />

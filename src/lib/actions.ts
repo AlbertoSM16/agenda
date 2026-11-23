@@ -8,7 +8,7 @@ import { deleteGoogleEvent, googleSession, revokeToken, upsertGoogleEvent } from
 import type { AgendaEvent } from "./types";
 import { back, num, required, str, withParam } from "./form";
 
-const TABLES = ["events", "tasks", "notes", "transactions", "shopping_items", "workouts", "exercises"] as const;
+const TABLES = ["events", "tasks", "notes", "transactions", "recurring_transactions", "shopping_items", "workouts", "exercises"] as const;
 type Table = (typeof TABLES)[number];
 
 async function save(table: Table, fd: FormData, data: Record<string, unknown>, fallback: string) {
@@ -162,6 +162,22 @@ export async function saveTransaction(fd: FormData) {
     description: str(fd, "description"),
     date: str(fd, "date") ?? todayISO(),
     payment_method: str(fd, "payment_method"),
+  }, "/finanzas");
+}
+
+export async function saveRecurring(fd: FormData) {
+  const amount = required(num(fd, "amount"), "importe");
+  if (amount <= 0) throw new Error("El importe debe ser mayor que 0");
+  const day = Math.trunc(num(fd, "day_of_month") ?? 1);
+  const start = str(fd, "start_month");
+  await save("recurring_transactions", fd, {
+    kind: (["ingreso", "ahorro"] as const).find((k) => k === str(fd, "kind")) ?? "gasto",
+    amount,
+    description: required(str(fd, "description"), "concepto"),
+    category: str(fd, "category") ?? "Otros",
+    payment_method: str(fd, "payment_method"),
+    day_of_month: Math.min(31, Math.max(1, day)),
+    ...(start && /^\d{4}-\d{2}$/.test(start) ? { start_month: `${start}-01` } : {}),
   }, "/finanzas");
 }
 

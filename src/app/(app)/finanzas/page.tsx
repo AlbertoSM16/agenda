@@ -1,17 +1,18 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, PiggyBank, Receipt, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, PiggyBank, Receipt, Repeat, Wallet } from "lucide-react";
 import { dbError } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, addMonths, eur, fmtDate, isYearMonth, monthLabel, todayISO } from "@/lib/format";
 import { currentPeriodYm, loadPaydays, period, periodDays, periodLabel } from "@/lib/periods";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, KINDS, SAVINGS_CATEGORIES, type Transaction } from "@/lib/types";
-import { saveTransaction } from "@/lib/actions";
+import { saveRecurring, saveTransaction } from "@/lib/actions";
+import { ensureRecurring } from "@/lib/recurring";
 import { CardTitle, DbError, Empty, Field, Kpi, PageHeader, Tabs } from "@/components/ui";
 import Donut from "@/components/Donut";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteButton from "@/components/DeleteButton";
 
-type SP = Promise<{ month?: string; cat?: string; tipo?: string; edit?: string }>;
+type SP = Promise<{ month?: string; cat?: string; tipo?: string; edit?: string; fijo?: string }>;
 
 const KIND_STYLE = {
   gasto: "peer-checked:border-rose-500/40 peer-checked:bg-rose-500/20 peer-checked:text-rose-300",
@@ -26,10 +27,14 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
   const supabase = await createClient();
 
   // Periodos de nómina: hace falta conocer las nóminas antes de pedir los movimientos.
-  const [{ paydays, res: payRes }, editRes] = await Promise.all([
+  // Primero se apuntan los gastos fijos que ya tocan, para que salgan en los totales.
+  const [{ paydays, res: payRes }, editRes, { res: recRes, items: fixed }] = await Promise.all([
     loadPaydays(supabase, addMonths(ym0, -7), addMonths(ym0, 1)),
     sp.edit ? supabase.from("transactions").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
+    ensureRecurring(supabase, today),
   ]);
+  const editingFixed = fixed.find((r) => r.id === sp.fijo) ?? null;
+  const fixedTotal = fixed.filter((r) => r.kind === "gasto").reduce((s, r) => s + r.amount, 0);
   const ym = isYearMonth(sp.month) ? sp.month : currentPeriodYm(paydays, today);
   const cur = period(ym, paydays, today);
   const months = Array.from({ length: 6 }, (_, i) => addMonths(ym, i - 5));
@@ -73,7 +78,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
 
   return (
     <div className="space-y-6">
-      <DbError message={dbError(payRes, mainRes, histRes, editRes)} />
+      <DbError message={dbError(payRes, recRes, mainRes, histRes, editRes)} />
       <PageHeader title="Gastos e ingresos">
         <Link href={`/finanzas?month=${addMonths(ym, -1)}`} className="btn" aria-label="Nómina anterior"><ChevronLeft className="h-4 w-4" /></Link>
         <span className="min-w-36 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-center leading-tight" title="Periodo de nómina a nómina">
@@ -165,6 +170,78 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
         </section>
       </div>
 
+      <section id="fijos" className="card">
+        <CardTitle title="Gastos fijos mensuales" accent="emerald">
+          <span className="font-mono text-xs text-rose-400">−{eur(fixedTotal)}/mes</span>
+        </CardTitle>
+        <p className="-mt-2 mb-4 text-xs text-slate-400">Se apuntan solos en el historial el día de cobro de cada mes. Si borras uno de esos movimientos, no se vuelve a crear.</p>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="flex flex-col gap-2 lg:col-span-7">
+            {fixed.length === 0 ? (
+              <Empty>No tienes gastos fijos</Empty>
+            ) : (
+              fixed.sort((a, b) => a.day_of_month - b.day_of_month || b.amount - a.amount).map((r) => (
+                <div key={r.id} className="card-inner flex items-center gap-3 rounded-xl border border-slate-800 p-3">
+                  <Repeat className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-200">{r.description}</p>
+                    <p className="text-xs text-slate-500">
+                      Día {r.day_of_month} · {r.category}{r.payment_method ? ` · ${r.payment_method}` : ""} · desde {monthLabel(r.start_month.slice(0, 7)).toLowerCase()}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 font-mono text-sm font-semibold ${KINDS[r.kind].color}`}>{KINDS[r.kind].sign}{eur(r.amount)}</span>
+                  <div className="flex shrink-0 gap-1">
+                    <Link href={`${back}&fijo=${r.id}#fijos`} className="btn btn-sm">Editar</Link>
+                    <DeleteButton table="recurring_transactions" id={r.id} back={`${back}#fijos`} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <form action={saveRecurring} className="flex flex-col gap-3 lg:col-span-5" key={editingFixed?.id ?? "nuevo-fijo"}>
+            <h3 className="text-sm font-semibold text-white">{editingFixed ? "Editar gasto fijo" : "Añadir gasto fijo"}</h3>
+            {editingFixed && <input type="hidden" name="id" value={editingFixed.id} />}
+            <input type="hidden" name="back" value={`${back}#fijos`} />
+            <input type="hidden" name="kind" value={editingFixed?.kind ?? "gasto"} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Concepto *">
+                <input className="input" name="description" required defaultValue={editingFixed?.description ?? ""} placeholder="Alquiler, Netflix…" />
+              </Field>
+              <Field label="Cantidad (€) *">
+                <input className="input font-mono" name="amount" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" required defaultValue={editingFixed?.amount ?? ""} placeholder="0,00" />
+              </Field>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Día del mes">
+                <input className="input font-mono" name="day_of_month" type="text" inputMode="numeric" pattern="([1-9]|[12][0-9]|3[01])" defaultValue={editingFixed?.day_of_month ?? 1} />
+              </Field>
+              <Field label="Desde">
+                <input className="input font-mono" name="start_month" type="month" defaultValue={editingFixed?.start_month.slice(0, 7) ?? today.slice(0, 7)} />
+              </Field>
+              <Field label="Categoría">
+                <input className="input" name="category" list="categorias" defaultValue={editingFixed?.category ?? ""} placeholder="Vivienda…" />
+              </Field>
+            </div>
+            <Field label="Método de pago">
+              <select className="input" name="payment_method" defaultValue={editingFixed?.payment_method ?? "Domiciliación"}>
+                <option value="">—</option>
+                <option>Tarjeta</option>
+                <option>Efectivo</option>
+                <option>Bizum</option>
+                <option>Transferencia</option>
+                <option>Domiciliación</option>
+              </select>
+            </Field>
+            <div className="flex gap-2">
+              <SubmitButton className="btn w-full border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-500">
+                {editingFixed ? "Guardar cambios" : "Añadir gasto fijo"}
+              </SubmitButton>
+              {editingFixed && <Link href={`${back}#fijos`} className="btn">Cancelar</Link>}
+            </div>
+          </form>
+        </div>
+      </section>
+
       <section className="card">
         <CardTitle title="Evolución de las últimas 6 nóminas" accent="emerald">
           <span className="flex gap-3 text-[11px] text-slate-400">
@@ -224,7 +301,10 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
                   <tr key={t.id} className="transition-colors hover:bg-slate-850/70">
                     <td className="whitespace-nowrap px-2 py-3 font-mono text-xs capitalize text-slate-400">{fmtDate(t.date, { day: "2-digit", month: "short" })}</td>
                     <td className="px-2 py-3">
-                      <p className="font-medium text-slate-200">{t.description || t.category}</p>
+                      <p className="flex items-center gap-1.5 font-medium text-slate-200">
+                        {t.recurring_id && <Repeat className="h-3 w-3 shrink-0 text-emerald-400" aria-label="Gasto fijo" />}
+                        {t.description || t.category}
+                      </p>
                       <p className="text-xs text-slate-500 sm:hidden">{t.category}</p>
                       {t.payment_method && <p className="hidden text-xs text-slate-500 sm:block">{t.payment_method}</p>}
                     </td>
