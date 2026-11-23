@@ -118,7 +118,7 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
                 </Field>
                 <Field label="Fecha y hora"><input className="input" type="datetime-local" name="started_at" required defaultValue={toInputDT(w.started_at)} /></Field>
                 <Field label="Duración (min)"><input className="input" name="duration_min" type="number" step="1" min="0" defaultValue={w.duration_s ? Math.round(w.duration_s / 60) : ""} /></Field>
-                <Field label="Distancia (km)"><input className="input" name="distance_km" type="number" step="0.01" min="0" defaultValue={w.distance_m ? w.distance_m / 1000 : ""} /></Field>
+                <Field label="Distancia (km)"><input className="input" name="distance_km" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" defaultValue={w.distance_m ? w.distance_m / 1000 : ""} /></Field>
                 <Field label="Desnivel (m)"><input className="input" name="elevation_gain_m" type="number" step="1" defaultValue={w.elevation_gain_m ?? ""} /></Field>
                 <Field label="FC media"><input className="input" name="avg_hr" type="number" defaultValue={w.avg_hr ?? ""} /></Field>
                 <Field label="FC máx."><input className="input" name="max_hr" type="number" defaultValue={w.max_hr ?? ""} /></Field>
@@ -186,7 +186,7 @@ export default async function WorkoutPage({ params, searchParams }: { params: Pa
                   <span className="text-xs text-slate-500">{i + 1}</span>
                   <input className="input py-1" name={`ex_${i}`} list="ejercicios" defaultValue={r.name} placeholder={i === 0 ? "Press banca" : ""} />
                   <input className="input py-1" name={`reps_${i}`} type="number" min="0" step="1" inputMode="numeric" defaultValue={r.reps ?? ""} />
-                  <input className="input py-1" name={`kg_${i}`} type="number" min="0" step="0.25" inputMode="decimal" defaultValue={r.kg ?? ""} />
+                  <input className="input py-1" name={`kg_${i}`} type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" defaultValue={r.kg ?? ""} />
                   <span className="hidden text-xs text-slate-400 sm:block">{est ? `${fmtNum(est, 1)} kg` : ""}</span>
                   <input type="checkbox" name={`warm_${i}`} defaultChecked={r.warm} className="h-4 w-4" title="Serie de calentamiento" />
                 </div>

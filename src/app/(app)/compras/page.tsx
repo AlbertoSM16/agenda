@@ -54,7 +54,7 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
                       <form action={buyShoppingItem} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-950/60 p-1">
                         <input type="hidden" name="id" value={i.id} />
                         <input type="hidden" name="back" value={back} />
-                        <input className="input w-24 py-1" name="price" type="number" step="0.01" min="0" placeholder="Precio" defaultValue={i.estimated_price ?? ""} aria-label="Precio pagado" />
+                        <input className="input w-24 py-1" name="price" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" placeholder="Precio" defaultValue={i.estimated_price ?? ""} aria-label="Precio pagado" />
                         <label className="flex items-center gap-1 text-xs text-slate-300">
                           <input type="checkbox" name="register" defaultChecked /> Apuntar gasto
                         </label>
@@ -120,7 +120,7 @@ export default async function ShoppingPage({ searchParams }: { searchParams: SP 
           </Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Precio estimado (€)">
-              <input className="input" name="estimated_price" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={editing?.estimated_price ?? ""} />
+              <input className="input" name="estimated_price" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" defaultValue={editing?.estimated_price ?? ""} />
             </Field>
             <Field label="Prioridad">
               <select className="input" name="priority" defaultValue={editing?.priority ?? "media"}>

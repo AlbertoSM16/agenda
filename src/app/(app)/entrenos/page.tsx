@@ -232,7 +232,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: SP 
             <div className="grid grid-cols-3 gap-3">
               <Field label="Series"><input className="input font-mono focus:border-amber-500" name="sets" type="number" min="1" max="20" defaultValue={4} required /></Field>
               <Field label="Reps"><input className="input font-mono focus:border-amber-500" name="reps" type="number" min="1" max="100" defaultValue={10} /></Field>
-              <Field label="Peso (kg)"><input className="input font-mono focus:border-amber-500" name="weight" type="number" step="0.25" min="0" inputMode="decimal" /></Field>
+              <Field label="Peso (kg)"><input className="input font-mono focus:border-amber-500" name="weight" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" /></Field>
             </div>
             <SubmitButton className="btn w-full border-amber-500 bg-amber-500 font-semibold text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-400 hover:text-slate-950">
               <Save className="h-4 w-4" /> Guardar registro
@@ -339,7 +339,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: SP 
             <Field label="Título *"><input className="input" name="title" required placeholder="Rodaje Z2, Series 1000 m, Pierna…" /></Field>
             <Field label="Fecha y hora *"><input className="input font-mono" type="datetime-local" name="started_at" required defaultValue={`${today}T18:00`} /></Field>
             <Field label="Duración (min)"><input className="input font-mono" name="duration_min" type="number" step="1" min="0" inputMode="numeric" /></Field>
-            <Field label="Distancia (km)"><input className="input font-mono" name="distance_km" type="number" step="0.01" min="0" inputMode="decimal" /></Field>
+            <Field label="Distancia (km)"><input className="input font-mono" name="distance_km" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" /></Field>
             <Field label="Desnivel (m)"><input className="input font-mono" name="elevation_gain_m" type="number" step="1" min="0" /></Field>
             <Field label="FC media"><input className="input font-mono" name="avg_hr" type="number" step="1" min="0" /></Field>
             <Field label="Calorías"><input className="input font-mono" name="calories" type="number" step="1" min="0" /></Field>

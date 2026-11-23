@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, PiggyBank, Receipt, Wallet } from "lucide-react";
 import { dbError } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
-import { addMonths, eur, fmtDate, isYearMonth, monthLabel, todayISO } from "@/lib/format";
+import { addDays, addMonths, eur, fmtDate, isYearMonth, monthLabel, todayISO } from "@/lib/format";
+import { currentPeriodYm, loadPaydays, period, periodDays, periodLabel } from "@/lib/periods";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, KINDS, SAVINGS_CATEGORIES, type Transaction } from "@/lib/types";
 import { saveTransaction } from "@/lib/actions";
 import { CardTitle, DbError, Empty, Field, Kpi, PageHeader, Tabs } from "@/components/ui";
@@ -21,15 +22,23 @@ const KIND_STYLE = {
 export default async function FinancePage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const today = todayISO();
-  const ym = isYearMonth(sp.month) ? sp.month : today.slice(0, 7);
-  const firstMonth = addMonths(ym, -5);
+  const ym0 = isYearMonth(sp.month) ? sp.month : today.slice(0, 7);
   const supabase = await createClient();
 
-  const [mainRes, histRes, editRes] = await Promise.all([
-    supabase.from("transactions").select("*").gte("date", `${ym}-01`).lt("date", `${addMonths(ym, 1)}-01`)
-      .order("date", { ascending: false }).order("created_at", { ascending: false }),
-    supabase.from("transactions").select("kind,amount,date").gte("date", `${firstMonth}-01`).lt("date", `${addMonths(ym, 1)}-01`),
+  // Periodos de nómina: hace falta conocer las nóminas antes de pedir los movimientos.
+  const [{ paydays, res: payRes }, editRes] = await Promise.all([
+    loadPaydays(supabase, addMonths(ym0, -7), addMonths(ym0, 1)),
     sp.edit ? supabase.from("transactions").select("*").eq("id", sp.edit).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const ym = isYearMonth(sp.month) ? sp.month : currentPeriodYm(paydays, today);
+  const cur = period(ym, paydays, today);
+  const months = Array.from({ length: 6 }, (_, i) => addMonths(ym, i - 5));
+  const periods = months.map((m) => period(m, paydays, today));
+
+  const [mainRes, histRes] = await Promise.all([
+    supabase.from("transactions").select("*").gte("date", cur.start).lt("date", cur.end)
+      .order("date", { ascending: false }).order("created_at", { ascending: false }),
+    supabase.from("transactions").select("kind,amount,date").gte("date", periods[0].start).lt("date", cur.end),
   ]);
   const all = ((mainRes.data ?? []) as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) }));
   const editing = editRes.data as Transaction | null;
@@ -44,11 +53,11 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
   for (const t of all) if (t.kind === "gasto") byCat.set(t.category, (byCat.get(t.category) ?? 0) + t.amount);
   const cats = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
 
-  // Evolución de los últimos 6 meses
-  const months = Array.from({ length: 6 }, (_, i) => addMonths(firstMonth, i));
+  // Evolución de los últimos 6 periodos de nómina
   const evo = new Map(months.map((m) => [m, { ingreso: 0, gasto: 0, ahorro: 0 }]));
   for (const t of (histRes.data ?? []) as Pick<Transaction, "kind" | "amount" | "date">[]) {
-    const e = evo.get(t.date.slice(0, 7));
+    const p = periods.find((p) => t.date >= p.start && t.date < p.end);
+    const e = p && evo.get(p.ym);
     if (e) e[t.kind] += Number(t.amount);
   }
   const maxEvo = Math.max(1, ...[...evo.values()].flatMap((e) => [e.ingreso, e.gasto]));
@@ -59,20 +68,24 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
   const base = `/finanzas?month=${ym}`;
   const catParam = sp.cat ? `&cat=${encodeURIComponent(sp.cat)}` : "";
   const back = `${base}${tipo ? `&tipo=${tipo}` : ""}${catParam}`;
-  const daysElapsed = ym === today.slice(0, 7) ? Number(today.slice(8)) : new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5), 0)).getUTCDate();
+  const isCurrent = cur.start <= today && today < cur.end;
+  const daysElapsed = isCurrent ? periodDays({ ...cur, end: addDays(today, 1) }) : periodDays(cur);
 
   return (
     <div className="space-y-6">
-      <DbError message={dbError(mainRes, histRes, editRes)} />
+      <DbError message={dbError(payRes, mainRes, histRes, editRes)} />
       <PageHeader title="Gastos e ingresos">
-        <Link href={`/finanzas?month=${addMonths(ym, -1)}`} className="btn" aria-label="Mes anterior"><ChevronLeft className="h-4 w-4" /></Link>
-        <span className="min-w-36 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-center font-mono text-xs text-emerald-400">{monthLabel(ym)}</span>
-        <Link href={`/finanzas?month=${addMonths(ym, 1)}`} className="btn" aria-label="Mes siguiente"><ChevronRight className="h-4 w-4" /></Link>
+        <Link href={`/finanzas?month=${addMonths(ym, -1)}`} className="btn" aria-label="Nómina anterior"><ChevronLeft className="h-4 w-4" /></Link>
+        <span className="min-w-36 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-center leading-tight" title="Periodo de nómina a nómina">
+          <span className="block text-[10px] text-emerald-300/80">Nómina de {monthLabel(ym)}</span>
+          <span className="block font-mono text-xs text-emerald-400">{periodLabel(cur)}</span>
+        </span>
+        <Link href={`/finanzas?month=${addMonths(ym, 1)}`} className="btn" aria-label="Nómina siguiente"><ChevronRight className="h-4 w-4" /></Link>
       </PageHeader>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Ingresos del mes" accent="emerald" icon={<ArrowUpRight className="h-4 w-4" />} value={<span className="text-emerald-400">{eur(income)}</span>} />
-        <Kpi label="Gastos del mes" accent="rose" icon={<ArrowDownRight className="h-4 w-4" />} value={<span className="text-rose-400">{eur(expense)}</span>}
+        <Kpi label="Ingresos del periodo" accent="emerald" icon={<ArrowUpRight className="h-4 w-4" />} value={<span className="text-emerald-400">{eur(income)}</span>} />
+        <Kpi label="Gastos del periodo" accent="rose" icon={<ArrowDownRight className="h-4 w-4" />} value={<span className="text-rose-400">{eur(expense)}</span>}
           hint={`Media diaria ${eur(expense / Math.max(daysElapsed, 1))}`} />
         <Kpi label="Ahorrado" accent="sky" icon={<PiggyBank className="h-4 w-4" />} value={<span className="text-sky-400">{eur(savings)}</span>}
           extra={income > 0 ? `${Math.round((savings / income) * 100)}% ingresos` : undefined} />
@@ -108,7 +121,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Cantidad (€) *">
-              <input className="input font-mono" name="amount" type="number" step="0.01" min="0.01" required inputMode="decimal" defaultValue={editing?.amount} placeholder="0,00" />
+              <input className="input font-mono" name="amount" type="text" inputMode="decimal" pattern="[0-9]+([.,][0-9]+)?" required defaultValue={editing?.amount} placeholder="0,00" />
             </Field>
             <Field label="Fecha">
               <input className="input font-mono" type="date" name="date" defaultValue={editing?.date ?? today} />
@@ -145,7 +158,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
             {sp.cat && <Link href={base} className="btn btn-sm">Quitar filtro</Link>}
           </CardTitle>
           {cats.length === 0 ? (
-            <Empty>Sin gastos este mes</Empty>
+            <Empty>Sin gastos en este periodo</Empty>
           ) : (
             <Donut items={cats} centerLabel="Gastado" selected={sp.cat} hrefFor={(c) => `${base}&cat=${encodeURIComponent(c)}`} />
           )}
@@ -153,7 +166,7 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
       </div>
 
       <section className="card">
-        <CardTitle title="Evolución de los últimos 6 meses" accent="emerald">
+        <CardTitle title="Evolución de las últimas 6 nóminas" accent="emerald">
           <span className="flex gap-3 text-[11px] text-slate-400">
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-400" />Ingresos</span>
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-rose-400" />Gastos</span>
@@ -161,10 +174,10 @@ export default async function FinancePage({ searchParams }: { searchParams: SP }
           </span>
         </CardTitle>
         <div className="flex h-44 items-end gap-3">
-          {months.map((m) => {
+          {months.map((m, i) => {
             const e = evo.get(m)!;
             return (
-              <Link key={m} href={`/finanzas?month=${m}`} className={`flex h-full flex-1 flex-col justify-end gap-1 rounded-lg p-1 ${m === ym ? "bg-slate-800/50" : "hover:bg-slate-800/30"}`}>
+              <Link key={m} href={`/finanzas?month=${m}`} title={periodLabel(periods[i])} className={`flex h-full flex-1 flex-col justify-end gap-1 rounded-lg p-1 ${m === ym ? "bg-slate-800/50" : "hover:bg-slate-800/30"}`}>
                 <div className="flex h-full items-end justify-center gap-1">
                   <div className="w-1/4 rounded-t bg-emerald-400/90" style={{ height: `${(e.ingreso / maxEvo) * 100}%` }} title={`Ingresos ${eur(e.ingreso)}`} />
                   <div className="w-1/4 rounded-t bg-rose-400/90" style={{ height: `${(e.gasto / maxEvo) * 100}%` }} title={`Gastos ${eur(e.gasto)}`} />

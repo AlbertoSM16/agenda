@@ -8,6 +8,7 @@ import {
   type AgendaEvent, type PlanDay, type ShoppingItem, type Task, type Transaction, type Workout,
 } from "@/lib/types";
 import { toggleTask } from "@/lib/actions";
+import { currentPeriodYm, loadPaydays, period, periodLabel } from "@/lib/periods";
 import { CardTitle, DbError, Empty, Kpi, PageHeader } from "@/components/ui";
 
 const DAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -21,10 +22,13 @@ export default async function Dashboard() {
   const week0 = mondayOf(today);
   const since = week0 < monthStart ? week0 : monthStart;
 
+  const { paydays, res: payRes } = await loadPaydays(supabase, addMonths(ym, -1), addMonths(ym, 1));
+  const pay = period(currentPeriodYm(paydays, today), paydays, today);
+
   const [events, tasks, txs, lastTxs, shopping, trainings, plan] = await Promise.all([
     supabase.from("events").select("*").gte("starts_at", today).lt("starts_at", addDays(today, 8)).order("starts_at"),
     supabase.from("tasks").select("*").not("due_date", "is", null).lte("due_date", addDays(today, 7)).order("due_date"),
-    supabase.from("transactions").select("kind,amount").gte("date", monthStart).lt("date", `${addMonths(ym, 1)}-01`),
+    supabase.from("transactions").select("kind,amount").gte("date", pay.start).lt("date", pay.end),
     supabase.from("transactions").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(5),
     supabase.from("shopping_items").select("estimated_price").eq("status", "pendiente"),
     supabase.from("workouts").select("id,sport,title,started_at,duration_s,distance_m").gte("started_at", since).order("started_at"),
@@ -71,7 +75,7 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <DbError message={dbError(events, tasks, txs, lastTxs, shopping, trainings, plan)} />
+      <DbError message={dbError(payRes, events, tasks, txs, lastTxs, shopping, trainings, plan)} />
       <PageHeader title="Resumen general">
         <QuickAction href={`/calendario?day=${today}`} color="indigo" label="Evento" />
         <QuickAction href="/finanzas#nuevo" color="emerald" label="Movimiento €" />
@@ -82,9 +86,9 @@ export default async function Dashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-6">
         <Kpi
-          href="/finanzas" accent="emerald" label="Balance mensual" icon={<TrendingUp className="h-4 w-4" />}
+          href="/finanzas" accent="emerald" label="Balance de la nómina" icon={<TrendingUp className="h-4 w-4" />}
           value={eur(available)} extra={savingRate !== null ? `${savingRate >= 0 ? "+" : ""}${savingRate}% ahorro` : undefined}
-          hint={`Ingresos ${eur(income)} · gastos ${eur(expense)}${savings ? ` · ahorrado ${eur(savings)}` : ""}`}
+          hint={`${periodLabel(pay)} · ingresos ${eur(income)} · gastos ${eur(expense)}${savings ? ` · ahorrado ${eur(savings)}` : ""}`}
         />
         <Kpi
           href="/calendario" accent="indigo" label="Eventos hoy" icon={<Clock className="h-4 w-4" />}
@@ -173,7 +177,7 @@ export default async function Dashboard() {
             )}
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-slate-800/80 pt-3 text-xs">
-            <span className="text-slate-400">Gasto mensual</span>
+            <span className="text-slate-400">Gasto desde la nómina</span>
             <span className="font-mono font-medium text-rose-400">−{eur(expense)}</span>
           </div>
         </section>
